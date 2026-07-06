@@ -2943,7 +2943,7 @@ function handleGoogleCredential(response) {
     return;
   }
   errEl.style.display = 'none';
-  localStorage.setItem('_auth', '1');
+  localStorage.setItem('_auth_v2', '1');
   localStorage.setItem('_authedEmail', email);
   selectUser(userId);
 }
@@ -2967,7 +2967,7 @@ function checkGlobalPw() { /* legacy - unused */ }
 updateUserUI();
 (function(){
   // 認証チェック
-  const authed = localStorage.getItem('_auth') === '1';
+  const authed = localStorage.getItem('_auth_v2') === '1';
   if(!authed){
     goTo('passwordScreen');
     initGoogleSignIn();
