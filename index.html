@@ -2971,6 +2971,7 @@ function initGoogleSignIn() {
 function checkGlobalPw() { /* legacy - unused */ }
 
 // 初期表示
+document.title = 'JS_RUNNING_v' + Date.now();
 // ログアウトURLパラメータがあれば認証情報をクリア（ボタンクリックに依存しない安全な処理）
 if (/[?&](logout|clearauth)/.test(location.search) || location.search.includes('logout')) {
   localStorage.removeItem('_auth_v2');
