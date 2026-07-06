@@ -2969,6 +2969,13 @@ function initGoogleSignIn() {
 function checkGlobalPw() { /* legacy - unused */ }
 
 // 初期表示
+// ログアウトURLパラメータがあれば認証情報をクリア（ボタンクリックに依存しない安全な処理）
+if (/[?&](logout|clearauth)/.test(location.search) || location.search.includes('logout')) {
+  localStorage.removeItem('_auth_v2');
+  localStorage.removeItem('_auth');
+  localStorage.removeItem('currentUser');
+  currentUser = '';
+}
 updateUserUI();
 (function(){
   // 認証チェック
