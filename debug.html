@@ -1,17 +1,15 @@
 <!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><title>Debug</title></head>
-<body>
-<pre id="out"></pre>
+<body style="font-family:monospace;padding:20px;font-size:14px">
+<div id="out"></div>
 <script>
-var data = {
-  _auth_v2: localStorage.getItem('_auth_v2'),
-  _auth: localStorage.getItem('_auth'),
-  currentUser: localStorage.getItem('currentUser'),
-  _authedEmail: localStorage.getItem('_authedEmail')
-};
-document.getElementById('out').textContent = JSON.stringify(data, null, 2);
-document.title = JSON.stringify(data);
+var keys = ['_auth_v2','_auth','currentUser','_authedEmail'];
+var data = {};
+keys.forEach(function(k){ data[k] = localStorage.getItem(k); });
+var text = JSON.stringify(data, null, 2);
+document.getElementById('out').innerHTML = '<pre>' + text + '</pre>';
+document.title = 'auth=' + data['_auth_v2'] + ' user=' + data['currentUser'];
 </script>
 </body>
 </html>
