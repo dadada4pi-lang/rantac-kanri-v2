@@ -2983,7 +2983,9 @@ updateUserUI();
   // 認証チェック
   const authed = localStorage.getItem('_auth_v2') === '1';
   if(!authed){
+    document.title = 'IIFE:notAuthed goTo:passwordScreen';
     goTo('passwordScreen');
+    document.title = 'IIFE:afterGoTo:passwordScreen cur=' + currentUser;
     initGoogleSignIn();
     return;
   }
