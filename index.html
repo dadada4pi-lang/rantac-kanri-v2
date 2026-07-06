@@ -2993,7 +2993,10 @@ updateUserUI();
   if (currentUser) {
     goTo('homeScreen');
   } else {
-    goTo('userSelectScreen');
+    // currentUserがない場合はGoogle認証からやり直し
+    localStorage.removeItem('_auth_v2');
+    goTo('passwordScreen');
+    initGoogleSignIn();
   }
 })();
 
