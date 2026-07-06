@@ -339,6 +339,9 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
   </div>
   <div class="home-footer">
     <button class="home-switch-btn" onclick="goTo('userSelectScreen')">担当者を切り替える</button>
+    <div id="migrateBtnArea" style="display:none;margin-top:8px">
+      <button class="home-switch-btn" style="color:#e53935" onclick="migrateAllFacilitiesToGAS()">⚙️ 施設データをスプシに移行（初回のみ）</button>
+    </div>
   </div>
   <span id="userBadge" style="display:none"></span>
   <div id="homeDate" style="display:none"></div>
@@ -729,25 +732,58 @@ function goTo(id){
 // ===== カスタム顧客・機器編集 =====
 const STANDARD_DEVICES = ['分包機','診察台','超音波','ICU','生化学','CBC','眼圧計','スリットランプ','X線','DR,CR','オートクレーブ','EOG','無影灯','手術台','麻酔器','呼吸器','生体モニタ','電気ﾒｽ','シーリング','歯科スケーラー','内視鏡','整形ﾊﾟﾜｰﾂｰﾙ','マイクロエンジ'];
 
-// カスタム顧客をDBに追加（GASから取得、localStorageをキャッシュとして使用）
-(function loadCustomFacilities(){
-  const arr = JSON.parse(localStorage.getItem('customFacilities') || '[]');
-  arr.forEach(f => DB.push(f));
-  // GASから最新データを取得してDBを同期
+// 施設データをGASから読み込む（localStorageをキャッシュとして使用）
+const _BASE_DB_LEN = DB.length; // コード内の元の施設数を記録
+
+(function loadFacilitiesFromGAS(){
+  // まずlocalStorageキャッシュを反映（即時表示）
+  const cached = JSON.parse(localStorage.getItem('facilitiesCache') || 'null');
+  if (cached && cached.length) {
+    DB.splice(_BASE_DB_LEN); // ベースDBを残してカスタム分を削除
+    cached.forEach(f => DB.push(f));
+  } else {
+    // 未移行の場合は旧localStorageキャッシュも確認
+    const old = JSON.parse(localStorage.getItem('customFacilities') || '[]');
+    old.forEach(f => DB.push(f));
+  }
+  // GASから最新を取得してキャッシュ更新
   fetch(GAS_URL + '?type=get_facilities')
     .then(r => r.json())
     .then(facilities => {
-      if (!Array.isArray(facilities)) return;
-      // localStorageを更新
-      localStorage.setItem('customFacilities', JSON.stringify(facilities));
-      // DBから既存のカスタム施設を削除して再追加
-      const baseLen = DB.length - arr.length;
-      DB.splice(baseLen);
+      if (!Array.isArray(facilities) || !facilities.length) return;
+      localStorage.setItem('facilitiesCache', JSON.stringify(facilities));
+      localStorage.setItem('_gasMigrated', '1');
+      DB.splice(_BASE_DB_LEN);
       facilities.forEach(f => DB.push(f));
       renderFacilityList && renderFacilityList();
     })
-    .catch(() => {}); // オフライン時はキャッシュを使用
+    .catch(() => {});
 })();
+
+// 全施設をGASに一括移行（山田さんのみ）
+function migrateAllFacilitiesToGAS() {
+  if (currentUser !== 'yamada') return;
+  if (!confirm(`${_BASE_DB_LEN}件の施設データをスプレッドシートに移行します。\n移行後はスプシで管理されます。よろしいですか？`)) return;
+  // 全ベース施設に_idを付与
+  const facilities = [];
+  for (let i = 0; i < _BASE_DB_LEN; i++) {
+    const f = Object.assign({}, DB[i]);
+    if (!f._id) f._id = 'base_' + i;
+    facilities.push(f);
+  }
+  // GASにPOSTで一括送信
+  const fd = new FormData();
+  fd.append('data', JSON.stringify({ type: 'bulk_import', facilities }));
+  fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: fd })
+    .then(() => {
+      localStorage.setItem('_gasMigrated', '1');
+      localStorage.setItem('facilitiesCache', JSON.stringify(facilities));
+      DB.splice(_BASE_DB_LEN);
+      facilities.forEach(f => DB.push(f));
+      alert('移行完了！スプレッドシートの「施設マスタ」シートを確認してください。');
+    })
+    .catch(() => alert('移行に失敗しました。再度お試しください。'));
+}
 
 function getDeviceEdits(facilityName){
   return JSON.parse(localStorage.getItem('devEdit_' + facilityName) || 'null');
@@ -883,13 +919,12 @@ function deleteFacility(){
   const f = DB[_currentFacIdx];
   if(!f) return;
   if(!confirm(`「${f.n}」を削除しますか？`)) return;
-  if(f._id){
-    // localStorageから削除
-    const custom = JSON.parse(localStorage.getItem('customFacilities')||'[]');
-    localStorage.setItem('customFacilities', JSON.stringify(custom.filter(c=>c._id!==f._id)));
-    // GASから削除
-    fetch(GAS_URL + '?type=delete_facility&id=' + f._id).catch(()=>{});
-  }
+  if(!f._id) f._id = 'base_' + _currentFacIdx;
+  // キャッシュから削除
+  const cached = JSON.parse(localStorage.getItem('facilitiesCache')||'[]');
+  localStorage.setItem('facilitiesCache', JSON.stringify(cached.filter(c=>c._id!==f._id)));
+  // GASから削除
+  fetch(GAS_URL + '?type=delete_facility&id=' + f._id).catch(()=>{});
   DB.splice(_currentFacIdx, 1);
   _currentFacIdx = null;
   document.getElementById('facilityDetailModal').style.display='none';
@@ -913,21 +948,24 @@ function saveNewFacility(){
     cd, cn:'', lat:null, lng:null, holiday:'', devices:{}
   };
   if(_editFacIdx !== null){
+    // 既存施設に_idがなければ付与
+    if (!DB[_editFacIdx]._id) DB[_editFacIdx]._id = 'base_' + _editFacIdx;
     Object.assign(DB[_editFacIdx], fac);
     const updated = DB[_editFacIdx];
-    // localStorageを更新
-    const custom = JSON.parse(localStorage.getItem('customFacilities')||'[]');
-    const ci = custom.findIndex(c=>c._id===updated._id);
-    if(ci>=0){ custom[ci]=updated; localStorage.setItem('customFacilities',JSON.stringify(custom)); }
+    // キャッシュ更新
+    const cached = JSON.parse(localStorage.getItem('facilitiesCache')||'[]');
+    const ci = cached.findIndex(c=>c._id===updated._id);
+    if(ci>=0){ cached[ci]=updated; } else { cached.push(updated); }
+    localStorage.setItem('facilitiesCache', JSON.stringify(cached));
     // GASに保存
     fetch(GAS_URL + '?type=save_facility&fac=' + encodeURIComponent(JSON.stringify(updated))).catch(()=>{});
   } else {
-    fac._id = Date.now();
+    fac._id = 'c_' + Date.now();
     DB.push(fac);
-    // localStorageに保存
-    const custom = JSON.parse(localStorage.getItem('customFacilities')||'[]');
-    custom.push(fac);
-    localStorage.setItem('customFacilities', JSON.stringify(custom));
+    // キャッシュに追加
+    const cached = JSON.parse(localStorage.getItem('facilitiesCache')||'[]');
+    cached.push(fac);
+    localStorage.setItem('facilitiesCache', JSON.stringify(cached));
     // GASに保存
     fetch(GAS_URL + '?type=save_facility&fac=' + encodeURIComponent(JSON.stringify(fac))).catch(()=>{});
   }
@@ -1862,7 +1900,7 @@ function applyOcrAndRoute(){
 }
 
 // ===== GAS / USER =====
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwJ3ehIaMzAfr8KarqNjZzZPKinGAVU4GY1fhjvuaDIQqR3i7HeQwrkHlWfaosB_ohM/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbx3GEAugd5XSFN4-IMZqdhBudUgwHl9a_0viApUWo4Lqrgb1GWtRMc4XhWKDRFUKXaP/exec';
 let currentUser = localStorage.getItem('currentUser') || null;
 let srRows = [];
 
@@ -1929,6 +1967,8 @@ function updateUserUI() {
   if (link) link.href = USER_SHEETS[currentUser] || '#';
   const dataBtn = document.getElementById('dataBtn');
   if (dataBtn) dataBtn.style.display = currentUser === 'yamada' ? '' : 'none';
+  const migrateArea = document.getElementById('migrateBtnArea');
+  if (migrateArea) migrateArea.style.display = (currentUser === 'yamada' && !localStorage.getItem('_gasMigrated')) ? '' : 'none';
   const myDataBtn = document.getElementById('myDataBtn');
   if (myDataBtn) myDataBtn.textContent = currentUser === 'yamada' ? '全員の出退勤・報告書を見る' : '自分の出退勤・報告書を見る';
   updateHomeDate();
