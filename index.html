@@ -44,7 +44,8 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
 .home-switch-btn{background:none;border:none;font-size:12px;color:var(--text-secondary);cursor:pointer;padding:4px}
 
 /* ===== STAFF SELECT ===== */
-#userSelectScreen{background:var(--bg);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px}
+#userSelectScreen{background:var(--bg);min-height:100vh;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px}
+#userSelectScreen.active{display:flex}
 .user-select-card{background:var(--surface);border-radius:16px;padding:32px 24px;width:100%;max-width:400px;text-align:center}
 .user-select-logo{height:64px;margin-bottom:20px}
 .user-select-subtitle{font-size:14px;color:var(--text-secondary);margin-bottom:24px}
@@ -290,7 +291,7 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
 </div>
 
 <!-- ===== LOGIN (Google OAuth) ===== -->
-<div id="passwordScreen" class="screen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f5">
+<div id="passwordScreen" class="screen" style="display:none;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f5">
   <div class="user-select-card" style="text-align:center">
     <img src="logo.png" alt="RANTAC" class="user-select-logo" style="margin-bottom:8px">
     <div style="font-size:13px;color:#888;margin-bottom:32px">社内専用システム</div>
@@ -715,7 +716,7 @@ const SCREENS = ['passwordScreen','homeScreen','methodScreen','textScreen','ocrS
 function goTo(id){
   SCREENS.forEach(s=>{
     const el=document.getElementById(s);
-    if(s===id){el.className=s==='homeScreen'?'':el.className.replace(' active','')+' active';el.style.display=(s==='homeScreen'||s==='userSelectScreen')?'flex':'block'}
+    if(s===id){el.className=s==='homeScreen'?'':el.className.replace(' active','')+' active';el.style.display=(s==='homeScreen'||s==='userSelectScreen'||s==='passwordScreen')?'flex':'block'}
     else{el.style.display='none';el.className=el.className.replace(' active','')}
   });
   window.scrollTo(0,0);
