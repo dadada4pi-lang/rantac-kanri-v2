@@ -340,7 +340,7 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
   </div>
   <div class="home-footer">
     <button class="home-switch-btn" onclick="goTo('userSelectScreen')">担当者を切り替える</button>
-    <button class="home-switch-btn" style="color:#e53935;margin-top:4px" onclick="if(confirm('ログアウトしますか？')){localStorage.removeItem('_auth_v2');localStorage.removeItem('currentUser');location.reload();}">ログアウト</button>
+    <button class="home-switch-btn" style="color:#e53935;margin-top:4px" onclick="localStorage.removeItem('_auth_v2');localStorage.removeItem('currentUser');location.href=location.href.split('?')[0]+'?logout=1'">ログアウト</button>
     <div id="migrateBtnArea" style="display:none;margin-top:8px">
       <button class="home-switch-btn" style="color:#e53935" onclick="migrateAllFacilitiesToGAS()">⚙️ 施設データをスプシに移行（初回のみ）</button>
     </div>
