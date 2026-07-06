@@ -343,7 +343,7 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
   </div>
   <div class="home-footer">
     <button class="home-switch-btn" onclick="goTo('userSelectScreen')">担当者を切り替える</button>
-    <button class="home-switch-btn" style="color:#e53935;margin-top:4px" onclick="if(typeof google!=='undefined')google.accounts.id.disableAutoSelect();localStorage.removeItem('_auth_v2');localStorage.removeItem('_auth');localStorage.removeItem('currentUser');location.href='https://dadada4pi-lang.github.io/rantac-kanri-v2/?logout=1'">ログアウト</button>
+    <button class="home-switch-btn" style="color:#e53935;margin-top:4px" onclick="if(typeof google!=='undefined')google.accounts.id.disableAutoSelect();localStorage.removeItem('_auth_v2');localStorage.removeItem('_auth');localStorage.removeItem('currentUser');location.href='https://dadada4pi-lang.github.io/rantac-kanri-v2/?logout=1&_v='+Date.now()">ログアウト</button>
     <div id="migrateBtnArea" style="display:none;margin-top:8px">
       <button class="home-switch-btn" style="color:#e53935" onclick="migrateAllFacilitiesToGAS()">⚙️ 施設データをスプシに移行（初回のみ）</button>
     </div>
