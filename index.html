@@ -729,10 +729,24 @@ function goTo(id){
 // ===== カスタム顧客・機器編集 =====
 const STANDARD_DEVICES = ['分包機','診察台','超音波','ICU','生化学','CBC','眼圧計','スリットランプ','X線','DR,CR','オートクレーブ','EOG','無影灯','手術台','麻酔器','呼吸器','生体モニタ','電気ﾒｽ','シーリング','歯科スケーラー','内視鏡','整形ﾊﾟﾜｰﾂｰﾙ','マイクロエンジ'];
 
-// カスタム顧客をDBに追加
+// カスタム顧客をDBに追加（GASから取得、localStorageをキャッシュとして使用）
 (function loadCustomFacilities(){
   const arr = JSON.parse(localStorage.getItem('customFacilities') || '[]');
   arr.forEach(f => DB.push(f));
+  // GASから最新データを取得してDBを同期
+  fetch(GAS_URL + '?type=get_facilities')
+    .then(r => r.json())
+    .then(facilities => {
+      if (!Array.isArray(facilities)) return;
+      // localStorageを更新
+      localStorage.setItem('customFacilities', JSON.stringify(facilities));
+      // DBから既存のカスタム施設を削除して再追加
+      const baseLen = DB.length - arr.length;
+      DB.splice(baseLen);
+      facilities.forEach(f => DB.push(f));
+      renderFacilityList && renderFacilityList();
+    })
+    .catch(() => {}); // オフライン時はキャッシュを使用
 })();
 
 function getDeviceEdits(facilityName){
@@ -869,10 +883,12 @@ function deleteFacility(){
   const f = DB[_currentFacIdx];
   if(!f) return;
   if(!confirm(`「${f.n}」を削除しますか？`)) return;
-  // カスタム施設の場合はlocalStorageからも削除
   if(f._id){
+    // localStorageから削除
     const custom = JSON.parse(localStorage.getItem('customFacilities')||'[]');
     localStorage.setItem('customFacilities', JSON.stringify(custom.filter(c=>c._id!==f._id)));
+    // GASから削除
+    fetch(GAS_URL + '?type=delete_facility&id=' + f._id).catch(()=>{});
   }
   DB.splice(_currentFacIdx, 1);
   _currentFacIdx = null;
@@ -898,16 +914,22 @@ function saveNewFacility(){
   };
   if(_editFacIdx !== null){
     Object.assign(DB[_editFacIdx], fac);
-    // カスタム顧客の場合はlocalStorageも更新
+    const updated = DB[_editFacIdx];
+    // localStorageを更新
     const custom = JSON.parse(localStorage.getItem('customFacilities')||'[]');
-    const ci = custom.findIndex(c=>c._id===DB[_editFacIdx]._id);
-    if(ci>=0){ custom[ci]=DB[_editFacIdx]; localStorage.setItem('customFacilities',JSON.stringify(custom)); }
+    const ci = custom.findIndex(c=>c._id===updated._id);
+    if(ci>=0){ custom[ci]=updated; localStorage.setItem('customFacilities',JSON.stringify(custom)); }
+    // GASに保存
+    fetch(GAS_URL + '?type=save_facility&fac=' + encodeURIComponent(JSON.stringify(updated))).catch(()=>{});
   } else {
     fac._id = Date.now();
     DB.push(fac);
+    // localStorageに保存
     const custom = JSON.parse(localStorage.getItem('customFacilities')||'[]');
     custom.push(fac);
     localStorage.setItem('customFacilities', JSON.stringify(custom));
+    // GASに保存
+    fetch(GAS_URL + '?type=save_facility&fac=' + encodeURIComponent(JSON.stringify(fac))).catch(()=>{});
   }
   closeAddFacModal();
   renderFacilityList();
