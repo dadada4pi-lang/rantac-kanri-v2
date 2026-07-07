@@ -798,21 +798,38 @@ function migrateAllFacilitiesToGAS() {
 
 const ALL_USERS = ['kishi','miyakawa','yamada','imura','goto','sato','tajima','horiuchi'];
 
+function mergeAttRecords(gasRecords, user) {
+  // GASにない日付のローカルデータは保持（送信直後でGASに未反映の場合）
+  const local = JSON.parse(localStorage.getItem('att_' + user) || '[]');
+  const gasDateSet = new Set(gasRecords.map(function(r){ return r.date; }));
+  const localOnly = local.filter(function(r){ return !gasDateSet.has(r.date); });
+  return gasRecords.concat(localOnly);
+}
+
+function mergeRepRecords(gasRecords, user) {
+  const local = JSON.parse(localStorage.getItem('rep_' + user) || '[]');
+  const gasKeys = new Set(gasRecords.map(function(r){ return r.date + '|' + r.visitTime + '|' + r.facility; }));
+  const localOnly = local.filter(function(r){
+    return !gasKeys.has(r.date + '|' + r.visitTime + '|' + r.facility);
+  });
+  return gasRecords.concat(localOnly);
+}
+
 function loadAllDataFromGAS() {
   ALL_USERS.forEach(function(u) {
     fetch(GAS_URL + '?type=get_att&user=' + u)
       .then(function(r){ return r.json(); })
       .then(function(records){
-        if (!Array.isArray(records) || !records.length) return;
-        localStorage.setItem('att_' + u, JSON.stringify(records));
+        if (!Array.isArray(records)) return;
+        localStorage.setItem('att_' + u, JSON.stringify(mergeAttRecords(records, u)));
         renderWorkSummary && renderWorkSummary();
         renderMyDataBody && renderMyDataBody();
       }).catch(function(){});
     fetch(GAS_URL + '?type=get_rep&user=' + u)
       .then(function(r){ return r.json(); })
       .then(function(records){
-        if (!Array.isArray(records) || !records.length) return;
-        localStorage.setItem('rep_' + u, JSON.stringify(records));
+        if (!Array.isArray(records)) return;
+        localStorage.setItem('rep_' + u, JSON.stringify(mergeRepRecords(records, u)));
         renderMyDataBody && renderMyDataBody();
       }).catch(function(){});
   });
@@ -823,15 +840,15 @@ function loadMyDataFromGAS() {
   fetch(GAS_URL + '?type=get_att&user=' + currentUser)
     .then(function(r){ return r.json(); })
     .then(function(records){
-      if (!Array.isArray(records) || !records.length) return;
-      localStorage.setItem('att_' + currentUser, JSON.stringify(records));
+      if (!Array.isArray(records)) return;
+      localStorage.setItem('att_' + currentUser, JSON.stringify(mergeAttRecords(records, currentUser)));
       renderMyData && renderMyData();
     }).catch(function(){});
   fetch(GAS_URL + '?type=get_rep&user=' + currentUser)
     .then(function(r){ return r.json(); })
     .then(function(records){
-      if (!Array.isArray(records) || !records.length) return;
-      localStorage.setItem('rep_' + currentUser, JSON.stringify(records));
+      if (!Array.isArray(records)) return;
+      localStorage.setItem('rep_' + currentUser, JSON.stringify(mergeRepRecords(records, currentUser)));
       renderMyData && renderMyData();
     }).catch(function(){});
 }
