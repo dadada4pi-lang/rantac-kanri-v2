@@ -731,7 +731,7 @@ function goTo(id){
     renderWorkSummary();
     loadAllDataFromGAS();
   }
-  if(id==='myDataScreen'){ renderMyData(); loadMyDataFromGAS(); }
+  if(id==='myDataScreen'){ renderMyData(); if(currentUser==='yamada') loadAllDataFromGAS(); else loadMyDataFromGAS(); }
   if(id==='delivLogScreen'){ renderDelivLogScreen(); }
 }
 
@@ -806,12 +806,14 @@ function loadAllDataFromGAS() {
         if (!Array.isArray(records) || !records.length) return;
         localStorage.setItem('att_' + u, JSON.stringify(records));
         renderWorkSummary && renderWorkSummary();
+        renderMyDataBody && renderMyDataBody();
       }).catch(function(){});
     fetch(GAS_URL + '?type=get_rep&user=' + u)
       .then(function(r){ return r.json(); })
       .then(function(records){
         if (!Array.isArray(records) || !records.length) return;
         localStorage.setItem('rep_' + u, JSON.stringify(records));
+        renderMyDataBody && renderMyDataBody();
       }).catch(function(){});
   });
 }
