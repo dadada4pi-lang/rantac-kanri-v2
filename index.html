@@ -2188,7 +2188,7 @@ function submitClockOut() {
   const breakMin = document.getElementById('attBreak').value;
   if (!clockOutRaw) { alert('退勤時刻を入力してください'); return; }
   const clockOut = roundUpTo15(clockOutRaw);
-  if (clockOut !== clockOutRaw) document.getElementById('attClockOut').value = clockOut;
+  if (clockOut !== clockOutRaw) { document.getElementById('attClockOut').value = clockOut; updateWorkHours(); }
 
   const directIn = isSales() ? (document.getElementById('attDirectIn').value.trim()) : '';
   const record = { date: saved.date, clockIn: saved.clockIn, clockOut, breakMin, holidayWork: saved.holidayWork ? '休日出勤' : '', directOut: saved.directOut || '', directIn };
