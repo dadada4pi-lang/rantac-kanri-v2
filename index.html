@@ -325,7 +325,7 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
 <div id="homeScreen">
   <div class="home-topbar" style="display:flex;justify-content:space-between;align-items:center">
     <a href="javascript:logoClick()"><img src="logo.png" alt="RANTAC" class="home-topbar-logo"></a>
-    <button onclick="location.reload()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888;padding:4px 8px" title="リロード">↻</button>
+    <button onclick="location.href=location.pathname+'?v='+Date.now()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888;padding:4px 8px" title="リロード">↻</button>
   </div>
   <div class="home-body">
     <div class="home-meta"><span id="homeGreeting"></span></div>
