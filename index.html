@@ -747,7 +747,7 @@ const _BASE_DB_LEN = DB.length; // コード内の元の施設数を記録
   // まずlocalStorageキャッシュを反映（即時表示）
   const cached = JSON.parse(localStorage.getItem('facilitiesCache') || 'null');
   if (cached && cached.length) {
-    DB.splice(_BASE_DB_LEN); // ベースDBを残してカスタム分を削除
+    DB.splice(0); // 移行済みの場合は元データも含め全削除してGASデータのみ使用
     cached.forEach(f => DB.push(f));
   } else {
     // 未移行の場合は旧localStorageキャッシュも確認
@@ -761,7 +761,7 @@ const _BASE_DB_LEN = DB.length; // コード内の元の施設数を記録
       if (!Array.isArray(facilities) || !facilities.length) return;
       localStorage.setItem('facilitiesCache', JSON.stringify(facilities));
       localStorage.setItem('_gasMigrated', '1');
-      DB.splice(_BASE_DB_LEN);
+      DB.splice(0);
       facilities.forEach(f => DB.push(f));
       renderFacilityList && renderFacilityList();
     })
