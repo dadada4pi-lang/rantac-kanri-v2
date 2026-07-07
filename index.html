@@ -2136,7 +2136,8 @@ function submitClockOut() {
 
   const key = 'att_' + currentUser;
   const arr = JSON.parse(localStorage.getItem(key) || '[]');
-  arr.push(record);
+  const existIdx = arr.findIndex(r => r.date === record.date);
+  if (existIdx >= 0) arr[existIdx] = record; else arr.push(record);
   localStorage.setItem(key, JSON.stringify(arr));
   localStorage.removeItem('clockIn_' + currentUser);
 
