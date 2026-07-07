@@ -294,6 +294,8 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
 </div>
 
 <!-- ===== LOGIN (Google OAuth) ===== -->
+<div id="offlineBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#e53935;color:#fff;text-align:center;font-size:13px;font-weight:600;padding:6px">オフラインです。ネット接続を確認してください。</div>
+
 <div id="passwordScreen" class="screen" style="display:none;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f5">
   <div class="user-select-card" style="text-align:center">
     <img src="logo.png" alt="RANTAC" class="user-select-logo" style="margin-bottom:8px">
@@ -682,6 +684,7 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
   </div>
 
   <div id="myDataPullIndicator" style="text-align:center;font-size:13px;color:#888;height:0;overflow:hidden;transition:height .2s">↓ 引っ張って更新</div>
+  <div id="myDataLoading" style="display:none;text-align:center;padding:20px;font-size:13px;color:#888">読み込み中...</div>
   <div id="myDataBody" style="padding:12px;overflow-y:auto"></div>
 </div>
 
@@ -719,6 +722,14 @@ const DB = [{"n":"くじら動物病院","a":"愛知県岡崎市上地3-18-7","c
 
 // ===== 画面遷移 =====
 const SCREENS = ['passwordScreen','homeScreen','methodScreen','textScreen','ocrScreen','routeScreen','listScreen','userSelectScreen','attendanceScreen','reportScreen','salesReportScreen','dataScreen','myDataScreen','delivLogScreen'];
+// ===== オフライン検知 =====
+(function(){
+  function update(){ document.getElementById('offlineBanner').style.display = navigator.onLine ? 'none' : 'block'; }
+  window.addEventListener('online', update);
+  window.addEventListener('offline', update);
+  document.addEventListener('DOMContentLoaded', update);
+})();
+
 function logoClick(){
   if(localStorage.getItem('_auth_v2')==='1' && localStorage.getItem('currentUser')){
     goTo('homeScreen');
@@ -828,7 +839,18 @@ function mergeRepRecords(gasRecords, user) {
   return gasRecords.concat(localOnly);
 }
 
+function showMyDataLoading(show) {
+  var el = document.getElementById('myDataLoading');
+  var body = document.getElementById('myDataBody');
+  if (!el) return;
+  el.style.display = show ? 'block' : 'none';
+  if (body) body.style.opacity = show ? '0.4' : '1';
+}
+
 function loadAllDataFromGAS() {
+  showMyDataLoading(true);
+  var done = 0, total = ALL_USERS.length * 2;
+  function tick() { if (++done >= total) showMyDataLoading(false); }
   ALL_USERS.forEach(function(u) {
     fetch(GAS_URL + '?type=get_att&user=' + u)
       .then(function(r){ return r.json(); })
@@ -837,33 +859,36 @@ function loadAllDataFromGAS() {
         localStorage.setItem('att_' + u, JSON.stringify(mergeAttRecords(records, u)));
         renderWorkSummary && renderWorkSummary();
         renderMyDataBody && renderMyDataBody();
-      }).catch(function(){});
+      }).catch(function(){}).finally(tick);
     fetch(GAS_URL + '?type=get_rep&user=' + u)
       .then(function(r){ return r.json(); })
       .then(function(records){
         if (!Array.isArray(records)) return;
         localStorage.setItem('rep_' + u, JSON.stringify(mergeRepRecords(records, u)));
         renderMyDataBody && renderMyDataBody();
-      }).catch(function(){});
+      }).catch(function(){}).finally(tick);
   });
 }
 
 function loadMyDataFromGAS() {
   if (!currentUser) return;
+  showMyDataLoading(true);
+  var done = 0;
+  function tick() { if (++done >= 2) showMyDataLoading(false); }
   fetch(GAS_URL + '?type=get_att&user=' + currentUser)
     .then(function(r){ return r.json(); })
     .then(function(records){
       if (!Array.isArray(records)) return;
       localStorage.setItem('att_' + currentUser, JSON.stringify(mergeAttRecords(records, currentUser)));
       renderMyData && renderMyData();
-    }).catch(function(){});
+    }).catch(function(){}).finally(tick);
   fetch(GAS_URL + '?type=get_rep&user=' + currentUser)
     .then(function(r){ return r.json(); })
     .then(function(records){
       if (!Array.isArray(records)) return;
       localStorage.setItem('rep_' + currentUser, JSON.stringify(mergeRepRecords(records, currentUser)));
       renderMyData && renderMyData();
-    }).catch(function(){});
+    }).catch(function(){}).finally(tick);
 }
 
 function getDeviceEdits(facilityName){
@@ -2400,6 +2425,10 @@ function submitSalesReport() {
   const repType = isDelivery() ? 'delivery_rep' : 'sales_rep';
   const key = 'rep_' + currentUser;
   const arr = JSON.parse(localStorage.getItem(key) || '[]');
+  const dupFacilities2 = validRows.filter(r => arr.some(e => e.date === date && e.facility === r.facility)).map(r => r.facility);
+  if (dupFacilities2.length) {
+    if (!confirm(`「${dupFacilities2.join('、')}」はすでに送信済みです。重複して送信しますか？`)) return;
+  }
   validRows.forEach(r => arr.push({ date, visitTime: r.visitTime, facility: r.facility, content: r.content, notes: r.notes, device: r.device }));
   localStorage.setItem(key, JSON.stringify(arr));
   const gasRows = validRows.map(r => ({ facility: r.facility, visitTime: r.visitTime, requirement: r.content, notes: r.notes, ...(isDelivery() ? {} : { device: r.device }) }));
@@ -2467,6 +2496,10 @@ function submitReport() {
   }));
   const key = 'rep_' + currentUser;
   const arr = JSON.parse(localStorage.getItem(key) || '[]');
+  const dupFacilities = rows.filter(r => arr.some(e => e.date === r.date && e.facility === r.facility)).map(r => r.facility);
+  if (dupFacilities.length) {
+    if (!confirm(`「${dupFacilities.join('、')}」は本日すでに送信済みです。重複して送信しますか？`)) return;
+  }
   arr.push(...rows);
   localStorage.setItem(key, JSON.stringify(arr));
   status.textContent = '送信中...';
