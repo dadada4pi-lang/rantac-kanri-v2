@@ -729,8 +729,9 @@ function goTo(id){
   if(id==='dataScreen'){
     if(currentUser !== 'yamada'){ alert('データ出力は山田さんのみ使用できます'); goTo('homeScreen'); return; }
     renderWorkSummary();
+    loadAllDataFromGAS();
   }
-  if(id==='myDataScreen'){ renderMyData(); }
+  if(id==='myDataScreen'){ renderMyData(); loadMyDataFromGAS(); }
   if(id==='delivLogScreen'){ renderDelivLogScreen(); }
 }
 
@@ -791,6 +792,46 @@ function migrateAllFacilitiesToGAS() {
       alert('移行完了！スプレッドシートの「施設マスタ」シートを確認してください。');
     })
     .catch(() => alert('移行に失敗しました。再度お試しください。'));
+}
+
+// ===== GASから出退勤・報告書を取得（管理者用・本人用） =====
+
+const ALL_USERS = ['kishi','miyakawa','yamada','imura','goto','sato','tajima','horiuchi'];
+
+function loadAllDataFromGAS() {
+  ALL_USERS.forEach(function(u) {
+    fetch(GAS_URL + '?type=get_att&user=' + u)
+      .then(function(r){ return r.json(); })
+      .then(function(records){
+        if (!Array.isArray(records) || !records.length) return;
+        localStorage.setItem('att_' + u, JSON.stringify(records));
+        renderWorkSummary && renderWorkSummary();
+      }).catch(function(){});
+    fetch(GAS_URL + '?type=get_rep&user=' + u)
+      .then(function(r){ return r.json(); })
+      .then(function(records){
+        if (!Array.isArray(records) || !records.length) return;
+        localStorage.setItem('rep_' + u, JSON.stringify(records));
+      }).catch(function(){});
+  });
+}
+
+function loadMyDataFromGAS() {
+  if (!currentUser) return;
+  fetch(GAS_URL + '?type=get_att&user=' + currentUser)
+    .then(function(r){ return r.json(); })
+    .then(function(records){
+      if (!Array.isArray(records) || !records.length) return;
+      localStorage.setItem('att_' + currentUser, JSON.stringify(records));
+      renderMyData && renderMyData();
+    }).catch(function(){});
+  fetch(GAS_URL + '?type=get_rep&user=' + currentUser)
+    .then(function(r){ return r.json(); })
+    .then(function(records){
+      if (!Array.isArray(records) || !records.length) return;
+      localStorage.setItem('rep_' + currentUser, JSON.stringify(records));
+      renderMyData && renderMyData();
+    }).catch(function(){});
 }
 
 function getDeviceEdits(facilityName){
