@@ -2075,7 +2075,8 @@ function openAttendance() {
     document.getElementById('attClockIn').value = saved.clockIn;
     showClockOutPanel(saved.date, saved.clockIn);
   } else {
-    document.getElementById('attClockIn').value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const defaultClockIn = { kishi:'08:30', miyakawa:'08:30', horiuchi:'09:00', yamada:'09:00', imura:'09:00', goto:'09:00', sato:'09:00', tajima:'09:00' };
+    document.getElementById('attClockIn').value = defaultClockIn[currentUser] || '09:00';
     document.getElementById('clockInPanel').style.display = '';
     document.getElementById('clockOutPanel').style.display = 'none';
     document.getElementById('directOutSection').style.display = isSales() ? '' : 'none';
