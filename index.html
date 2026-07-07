@@ -819,6 +819,18 @@ function migrateAllFacilitiesToGAS() {
 
 const ALL_USERS = ['kishi','miyakawa','yamada','imura','goto','sato','tajima','horiuchi'];
 
+// キャッシュバージョン：変更するとすべてのユーザーのキャッシュが自動クリアされる
+(function() {
+  const CACHE_VER = '3';
+  if (localStorage.getItem('_cacheVer') !== CACHE_VER) {
+    ALL_USERS.forEach(function(u) {
+      localStorage.removeItem('att_' + u);
+      localStorage.removeItem('rep_' + u);
+    });
+    localStorage.setItem('_cacheVer', CACHE_VER);
+  }
+})();
+
 function mergeAttRecords(gasRecords, user) {
   // 今日の日付のみ、GASに未反映のローカルデータを保持
   const today = new Date().toISOString().slice(0, 10);
