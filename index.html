@@ -2776,10 +2776,30 @@ function downloadCSV(type, user) {
 
 function clearData(user) {
   const name = USER_NAMES[user] || user;
-  if (!confirm(`${name}のデータをすべて削除しますか？`)) return;
+  if (!confirm(`${name}のデータをすべて削除しますか？\nアプリとスプレッドシートの両方から削除されます。`)) return;
   localStorage.removeItem('att_' + user);
   localStorage.removeItem('rep_' + user);
+  fetch(GAS_URL + '?type=clear_att&user=' + user).catch(()=>{});
+  fetch(GAS_URL + '?type=clear_rep&user=' + user).catch(()=>{});
   alert('削除しました');
+}
+
+function deleteAttRecord(user, date) {
+  if (!confirm(`${date} の出退勤を削除しますか？`)) return;
+  const arr = JSON.parse(localStorage.getItem('att_' + user) || '[]');
+  const newArr = arr.filter(r => r.date !== date);
+  localStorage.setItem('att_' + user, JSON.stringify(newArr));
+  fetch(GAS_URL + '?type=delete_att&user=' + user + '&date=' + date).catch(()=>{});
+  renderMyDataBody();
+}
+
+function deleteRepDate(user, date) {
+  if (!confirm(`${date} の報告書をすべて削除しますか？`)) return;
+  const arr = JSON.parse(localStorage.getItem('rep_' + user) || '[]');
+  const newArr = arr.filter(r => r.date !== date);
+  localStorage.setItem('rep_' + user, JSON.stringify(newArr));
+  fetch(GAS_URL + '?type=delete_rep_date&user=' + user + '&date=' + date).catch(()=>{});
+  renderMyDataBody();
 }
 
 // ===== MY DATA SCREEN =====
@@ -2909,6 +2929,7 @@ function renderMyAttHTML(user) {
         <div style="min-width:50px;font-weight:600;color:#333">${(r.date||'').slice(5).replace('-','/')}</div>
         <div style="flex:1;color:#555">${r.clockIn||'-'} → ${r.clockOut||'-'}${hw}${dOut}</div>
         <div style="min-width:54px;text-align:right;font-weight:700;color:#1a56db">${isSales ? fmtMinOt(dispMin) : fmtMin(mins)}</div>
+        <button onclick="deleteAttRecord('${user}','${r.date}')" style="background:none;border:none;color:#ccc;font-size:16px;cursor:pointer;padding:0 2px;line-height:1" title="削除">✕</button>
       </div>`;
     }).join('');
     const totalMin = isSales
@@ -2957,7 +2978,10 @@ function renderMyRepHTML(user) {
           ${r.notes ? `<div style="font-size:11px;color:#999;margin-top:2px;padding-left:${r.visitTime?'48px':'0'}">備考：${r.notes}</div>` : ''}
         </div>`).join('');
       return `<div style="margin-bottom:10px">
-        <div style="font-size:13px;font-weight:700;color:#555;margin-bottom:4px;padding-left:4px">${parseInt(m)}/${parseInt(d)}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;padding-left:4px">
+          <span style="font-size:13px;font-weight:700;color:#555">${parseInt(m)}/${parseInt(d)}</span>
+          <button onclick="deleteRepDate('${user}','${date}')" style="background:none;border:none;color:#ccc;font-size:13px;cursor:pointer;padding:0 4px" title="この日の報告書を削除">✕</button>
+        </div>
         ${rows}
       </div>`;
     }).join('');
