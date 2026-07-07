@@ -834,21 +834,25 @@ const ALL_USERS = ['kishi','miyakawa','yamada','imura','goto','sato','tajima','h
   }
 })();
 
+function getTodayLocal() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
 function mergeAttRecords(gasRecords, user) {
-  // 今日の日付のみ、GASに未反映のローカルデータを保持
-  const today = new Date().toISOString().slice(0, 10);
-  const local = JSON.parse(localStorage.getItem('att_' + user) || '[]');
-  const gasDateSet = new Set(gasRecords.map(function(r){ return r.date; }));
-  const localOnly = local.filter(function(r){ return r.date === today && !gasDateSet.has(r.date); });
-  return gasRecords.concat(localOnly);
+  var today = getTodayLocal();
+  var local = JSON.parse(localStorage.getItem('att_' + user) || '[]');
+  var localToday = local.filter(function(r){ return r.date === today; });
+  var gasPast = gasRecords.filter(function(r){ return r.date !== today; });
+  var gasToday = gasRecords.filter(function(r){ return r.date === today; });
+  return gasPast.concat(localToday.length ? localToday : gasToday);
 }
 
 function mergeRepRecords(gasRecords, user) {
-  // 今日の日付のみ、GASに未反映のローカルデータを保持
-  const today = new Date().toISOString().slice(0, 10);
-  const local = JSON.parse(localStorage.getItem('rep_' + user) || '[]');
-  const gasKeys = new Set(gasRecords.map(function(r){ return r.date + '|' + r.visitTime + '|' + r.facility; }));
-  const localOnly = local.filter(function(r){
+  var today = getTodayLocal();
+  var local = JSON.parse(localStorage.getItem('rep_' + user) || '[]');
+  var gasKeys = new Set(gasRecords.map(function(r){ return r.date + '|' + r.visitTime + '|' + r.facility; }));
+  var localOnly = local.filter(function(r){
     return r.date === today && !gasKeys.has(r.date + '|' + r.visitTime + '|' + r.facility);
   });
   return gasRecords.concat(localOnly);
