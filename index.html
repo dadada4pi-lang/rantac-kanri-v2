@@ -599,7 +599,10 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
   </div>
   <!-- 退勤パネル -->
   <div class="card" id="clockOutPanel" style="display:none">
-    <div id="clockInInfo" style="text-align:center;background:#e8f4fd;border-radius:10px;padding:10px;margin-bottom:8px;font-size:14px;color:#333;line-height:1.8"></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <div id="clockInInfo" style="flex:1;text-align:center;background:#e8f4fd;border-radius:10px;padding:10px;font-size:14px;color:#333;line-height:1.8"></div>
+      <button onclick="resetClockIn()" style="white-space:nowrap;padding:8px 10px;border:1.5px solid #e53935;border-radius:8px;background:#fff;color:#e53935;font-size:12px;font-weight:600;cursor:pointer">やり直す</button>
+    </div>
     <div class="att-section">
       <div class="att-label">退勤時刻</div>
       <div style="display:flex;gap:8px;align-items:center">
@@ -2096,6 +2099,12 @@ function updateUserUI() {
   if (rt) rt.textContent = `報告書（${name}）`;
 }
 
+function resetClockIn() {
+  if (!confirm('出勤時刻をやり直しますか？')) return;
+  localStorage.removeItem('clockIn_' + currentUser);
+  openAttendance();
+}
+
 function showClockOutPanel(date, clockIn) {
   document.getElementById('clockInInfo').innerHTML = `${date}<br>出勤時刻：${clockIn}`;
   document.getElementById('attClockOut').value = '';
@@ -2125,6 +2134,7 @@ function openAttendance() {
     document.getElementById('attClockIn').value = saved.clockIn;
     showClockOutPanel(saved.date, saved.clockIn);
   } else {
+    localStorage.removeItem('clockIn_' + currentUser);
     const defaultClockIn = { kishi:'09:30', miyakawa:'09:00', horiuchi:'09:00', yamada:'09:00', imura:'09:00', goto:'09:00', sato:'09:00', tajima:'09:00' };
     document.getElementById('attClockIn').value = defaultClockIn[currentUser] || '09:00';
     document.getElementById('clockInPanel').style.display = '';
