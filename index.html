@@ -1325,9 +1325,12 @@ function toggleCalDate(iso){
 function saveCompanyCal(){
   const data = { holidays: [...COMPANY_HOLIDAYS], workdays: [...COMPANY_WORKDAYS] };
   localStorage.setItem('companyCal', JSON.stringify(data));
-  const fd = new FormData();
-  fd.append('data', JSON.stringify({ type: 'save_company_cal', ...data }));
-  fetch(GAS_URL, { method:'POST', mode:'no-cors', body:fd })
+  const params = new URLSearchParams({
+    type: 'save_company_cal',
+    holidays: JSON.stringify([...COMPANY_HOLIDAYS]),
+    workdays: JSON.stringify([...COMPANY_WORKDAYS])
+  });
+  fetch(GAS_URL + '?' + params.toString(), { mode: 'no-cors' })
     .then(()=>{
       const st = document.getElementById('calSaveStatus');
       if(st){ st.textContent='保存しました'; st.style.display=''; setTimeout(()=>{ st.style.display='none'; },2000); }
