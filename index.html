@@ -352,6 +352,7 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
       <button class="home-list-item" onclick="openReport()">報告書を作成する<span class="home-list-chevron">›</span></button>
       <button class="home-list-item" onclick="goTo('delivLogScreen')">配達記録を見る<span class="home-list-chevron">›</span></button>
       <button class="home-list-item" onclick="goTo('listScreen')">顧客一覧を見る<span class="home-list-chevron">›</span></button>
+      <button class="home-list-item" onclick="goTo('calendarScreen')">会社カレンダーを見る<span class="home-list-chevron">›</span></button>
       <button class="home-list-item" id="dataBtn" onclick="goTo('dataScreen')" style="display:none">データを出力する<span class="home-list-chevron">›</span></button>
     </div>
     <div id="todayDeliveryBox" style="display:none;margin-top:16px"></div>
@@ -698,6 +699,27 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
   <div id="myDataBody" style="padding:12px;overflow-y:auto"></div>
 </div>
 
+<!-- ===== COMPANY CALENDAR SCREEN ===== -->
+<div id="calendarScreen" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="goTo('homeScreen')">←</button>
+    会社カレンダー
+    <a href="javascript:logoClick()" style="display:inline-block"><img src="logo.png" class="topbar-logo" alt="RANTAC"></a>
+  </div>
+  <div style="padding:12px">
+    <div id="calAdminBar" style="display:none;background:#fff3e0;border:1px solid #ffe0b2;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#e65100">
+      ▼ 日付をタップして休日・出勤日を切り替えられます（山田のみ）
+    </div>
+    <div style="display:flex;gap:16px;background:#fff;border-radius:10px;padding:10px 14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.07)">
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:#c0392b"></span>国民の祝日</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:#1a1a2e"></span>会社休日</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:#27ae60"></span>週末出勤</div>
+    </div>
+    <div id="calGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
+    <div id="calSaveStatus" style="text-align:center;font-size:13px;margin-top:12px;color:#27ae60;display:none"></div>
+  </div>
+</div>
+
 <!-- ===== DELIVERY LOG SCREEN ===== -->
 <div id="delivLogScreen" class="screen">
   <div class="screen-header">
@@ -758,6 +780,7 @@ function goTo(id){
   if(id==='homeScreen'){ document.getElementById('homeScreen').style.display='flex'; renderTodayDelivery(); }
   if(id==='listScreen'){ window._staffFilter=''; window._rankFilter=''; renderFacilityList(); }
   if(id==='textScreen'){ renderFavs(); }
+  if(id==='calendarScreen'){ renderCompanyCal(); }
   if(id==='dataScreen'){
     if(currentUser !== 'yamada'){ alert('データ出力は山田さんのみ使用できます'); goTo('homeScreen'); return; }
     renderWorkSummary();
@@ -1174,11 +1197,129 @@ const HOLIDAYS = new Set([
   '2026-07-20','2026-08-11','2026-09-21','2026-09-22','2026-09-23',
   '2026-10-12','2026-11-03','2026-11-23',
 ]);
+// 会社カレンダーデータ（GASから読み込み）
+let COMPANY_HOLIDAYS = new Set(); // 会社独自休日（平日追加分）
+let COMPANY_WORKDAYS = new Set(); // 週末出勤日
+
 function isHoliday(dateStr){
   const d=new Date(dateStr+'T00:00:00');
-  return d.getDay()===0||d.getDay()===6||HOLIDAYS.has(dateStr);
+  if(COMPANY_WORKDAYS.has(dateStr)) return false;
+  return d.getDay()===0||d.getDay()===6||HOLIDAYS.has(dateStr)||COMPANY_HOLIDAYS.has(dateStr);
 }
 function isBusinessDay(dateStr){ return !isHoliday(dateStr); }
+
+// ===== 会社カレンダー =====
+const CAL_NATIONAL = new Set([
+  '2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-05-06',
+  '2026-07-20','2026-08-11','2026-09-21','2026-09-22','2026-09-23',
+  '2026-10-12','2026-11-03','2026-11-23',
+  '2027-01-01','2027-01-11','2027-02-11','2027-02-23','2027-03-21','2027-03-22',
+]);
+const CAL_NATIONAL_LABEL = {
+  '2026-04-29':'昭和の日','2026-05-03':'憲法記念日','2026-05-04':'みどりの日',
+  '2026-05-05':'こどもの日','2026-05-06':'振替休日','2026-07-20':'海の日',
+  '2026-08-11':'山の日','2026-09-21':'敬老の日','2026-09-22':'国民の休日',
+  '2026-09-23':'秋分の日','2026-10-12':'スポーツの日','2026-11-03':'文化の日',
+  '2026-11-23':'勤労感謝','2027-01-01':'元日','2027-01-11':'成人の日',
+  '2027-02-11':'建国記念','2027-02-23':'天皇誕生日','2027-03-21':'春分の日','2027-03-22':'振替休日',
+};
+
+function loadCompanyCal(){
+  const cached = localStorage.getItem('companyCal');
+  if(cached){ try{ applyCompanyCal(JSON.parse(cached)); }catch(e){} }
+  fetch(GAS_URL + '?type=get_company_cal')
+    .then(r=>r.json())
+    .then(data=>{
+      if(!data||typeof data!=='object') return;
+      localStorage.setItem('companyCal', JSON.stringify(data));
+      applyCompanyCal(data);
+    }).catch(()=>{});
+}
+
+function applyCompanyCal(data){
+  COMPANY_HOLIDAYS = new Set(data.holidays||[]);
+  COMPANY_WORKDAYS = new Set(data.workdays||[]);
+}
+
+function goToCalendar(){
+  goTo('calendarScreen');
+  renderCompanyCal();
+}
+
+function renderCompanyCal(){
+  const isAdmin = currentUser === 'yamada';
+  document.getElementById('calAdminBar').style.display = isAdmin ? '' : 'none';
+  const grid = document.getElementById('calGrid');
+  const MONTHS = [
+    {y:2026,m:4},{y:2026,m:5},{y:2026,m:6},{y:2026,m:7},{y:2026,m:8},{y:2026,m:9},
+    {y:2026,m:10},{y:2026,m:11},{y:2026,m:12},{y:2027,m:1},{y:2027,m:2},{y:2027,m:3},
+  ];
+  const DOW=['日','月','火','水','木','金','土'];
+  grid.innerHTML = MONTHS.map(({y,m})=>{
+    const daysInMonth = new Date(y,m,0).getDate();
+    const startDow = new Date(y,m-1,1).getDay();
+    let cells=[];
+    for(let i=0;i<startDow;i++) cells.push('<td></td>');
+    for(let d=1;d<=daysInMonth;d++){
+      const iso=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const dow=new Date(y,m-1,d).getDay();
+      const isNat=CAL_NATIONAL.has(iso);
+      const isCompH=COMPANY_HOLIDAYS.has(iso);
+      const isCompW=COMPANY_WORKDAYS.has(iso);
+      const isWkend=dow===0||dow===6;
+      const label=CAL_NATIONAL_LABEL[iso]||(isCompH&&!isWkend?'会社休日':'');
+      let bg='',color='';
+      if(isCompW){bg='#27ae60';color='#fff';}
+      else if(isNat){bg='#c0392b';color='#fff';}
+      else if(isWkend||isCompH){bg='#1a1a2e';color='#fff';}
+      else if(dow===0){color='#c0392b';}
+      else if(dow===6){color='#2471a3';}
+      const clickAttr=isAdmin?`onclick="toggleCalDate('${iso}')" style="cursor:pointer"`:'';
+      cells.push(`<td ${clickAttr} data-iso="${iso}">
+        <div style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:${bg};color:${color||'inherit'};font-size:12px">${d}</div>
+        ${label?`<div style="font-size:8px;color:#888;line-height:1">${label}</div>`:''}
+      </td>`);
+      if((cells.length)%7===0){cells.push('</tr><tr>');}
+    }
+    while(cells.length%7!==0) cells.push('<td></td>');
+    return `<div style="background:#fff;border-radius:10px;padding:10px;box-shadow:0 1px 4px rgba(0,0,0,0.07)">
+      <div style="font-size:14px;font-weight:700;color:#1a1a2e;margin-bottom:6px">${y}年${m}月</div>
+      <table style="width:100%;border-collapse:collapse">
+        <tr>${DOW.map((d,i)=>`<th style="font-size:10px;text-align:center;color:${i===0?'#c0392b':i===6?'#2471a3':'#888'};padding:2px 0">${d}</th>`).join('')}</tr>
+        <tr>${cells.join('')}</tr>
+      </table>
+    </div>`;
+  }).join('');
+}
+
+function toggleCalDate(iso){
+  if(currentUser !== 'yamada') return;
+  const d = new Date(iso+'T00:00:00');
+  const isWkend = d.getDay()===0||d.getDay()===6;
+  if(isWkend){
+    // 週末 → 出勤日切り替え
+    if(COMPANY_WORKDAYS.has(iso)) COMPANY_WORKDAYS.delete(iso);
+    else COMPANY_WORKDAYS.add(iso);
+  } else {
+    // 平日/祝日 → 会社休日切り替え
+    if(COMPANY_HOLIDAYS.has(iso)) COMPANY_HOLIDAYS.delete(iso);
+    else COMPANY_HOLIDAYS.add(iso);
+  }
+  renderCompanyCal();
+  saveCompanyCal();
+}
+
+function saveCompanyCal(){
+  const data = { holidays: [...COMPANY_HOLIDAYS], workdays: [...COMPANY_WORKDAYS] };
+  localStorage.setItem('companyCal', JSON.stringify(data));
+  const fd = new FormData();
+  fd.append('data', JSON.stringify({ type: 'save_company_cal', ...data }));
+  fetch(GAS_URL, { method:'POST', mode:'no-cors', body:fd })
+    .then(()=>{
+      const st = document.getElementById('calSaveStatus');
+      if(st){ st.textContent='保存しました'; st.style.display=''; setTimeout(()=>{ st.style.display='none'; },2000); }
+    }).catch(()=>{});
+}
 
 function distKm(a,b){
   const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLng=(b.lng-a.lng)*Math.PI/180;
@@ -2155,6 +2296,7 @@ function _doSelectUser(user) {
   currentUser = user;
   localStorage.setItem('currentUser', user);
   updateUserUI();
+  loadCompanyCal();
   goTo('homeScreen');
 }
 
@@ -3368,6 +3510,8 @@ updateUserUI();
     } catch(e) { localStorage.removeItem('_savedRoute'); }
   }
   if (currentUser) {
+    updateUserUI();
+    loadCompanyCal();
     goTo('homeScreen');
   } else {
     // currentUserがない場合はGoogle認証からやり直し
