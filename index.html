@@ -437,6 +437,10 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
     施設名を入力
     <a href="javascript:logoClick()" style="display:inline-block"><img src="logo.png" class="topbar-logo" alt="RANTAC"></a>
   </div>
+  <div class="card" id="favCard" style="display:none">
+    <div class="sec-label">⭐ よく使う施設</div>
+    <div id="favList" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+  </div>
   <div class="card">
     <div class="sec-label">施設名・略称で検索</div>
     <div class="search-wrap">
@@ -753,6 +757,7 @@ function goTo(id){
   window.scrollTo(0,0);
   if(id==='homeScreen'){ document.getElementById('homeScreen').style.display='flex'; renderTodayDelivery(); }
   if(id==='listScreen'){ window._staffFilter=''; window._rankFilter=''; renderFacilityList(); }
+  if(id==='textScreen'){ renderFavs(); }
   if(id==='dataScreen'){
     if(currentUser !== 'yamada'){ alert('データ出力は山田さんのみ使用できます'); goTo('homeScreen'); return; }
     renderWorkSummary();
@@ -1237,6 +1242,35 @@ function searchDB(q){
   }).slice(0,12);
 }
 
+function getFavs(){
+  return JSON.parse(localStorage.getItem('favs_' + (currentUser||'')) || '[]');
+}
+function toggleFav(name){
+  const favs = getFavs();
+  const idx = favs.indexOf(name);
+  if(idx >= 0) favs.splice(idx,1);
+  else favs.push(name);
+  localStorage.setItem('favs_' + (currentUser||''), JSON.stringify(favs));
+  renderFavs();
+  onSearch(document.getElementById('searchInput')?.value || '');
+}
+function renderFavs(){
+  const favs = getFavs();
+  const card = document.getElementById('favCard');
+  const list = document.getElementById('favList');
+  if(!card || !list) return;
+  if(!favs.length){ card.style.display='none'; return; }
+  card.style.display='';
+  list.innerHTML = favs.map(name => {
+    const f = DB.find(d => d.n === name);
+    if(!f) return '';
+    const closed = todayClosed(f);
+    return `<button onclick="addFacility(${DB.indexOf(f)})" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px solid var(--border);border-radius:20px;background:var(--surface);font-size:13px;font-weight:600;color:${closed?'#bbb':'var(--text)'};cursor:pointer;font-family:inherit">
+      <span>⭐</span><span>${f.n}</span>${closed?'<span style="font-size:10px;color:#bbb">休診</span>':''}
+    </button>`;
+  }).filter(Boolean).join('');
+}
+
 function onSearch(val){
   const sug=document.getElementById('suggestions');
   if(!val.trim()){sug.style.display='none';return}
@@ -1250,8 +1284,9 @@ function onSearch(val){
     const closedBadge=closed?`<span class="badge b-closed">本日休診</span>`:'';
     const cdDays=(f.cd&&f.cd.length)?`休診：${f.cd.map(d=>DAYS[d]+'曜').join('・')}`:'';
     const cn=f.cn||'';
-    return `<div class="sug-item" onclick="addFacility(${DB.indexOf(f)})">
-      <div style="flex:1">
+    const isFav = getFavs().includes(f.n);
+    return `<div class="sug-item" style="display:flex;align-items:center">
+      <div style="flex:1" onclick="addFacility(${DB.indexOf(f)});event.stopPropagation()">
         <div class="sug-name">${f.n}</div>
         <div class="sug-addr">${f.a||''}</div>
         ${cdDays?`<div style="font-size:11px;color:#e67e22;margin-top:2px">🗓 ${cdDays}</div>`:''}
@@ -1259,6 +1294,7 @@ function onSearch(val){
       </div>
       ${closedBadge}
       <span class="sug-badge badge ${badgeClass}">${dlBadgeText(dl)}</span>
+      <button onclick="toggleFav('${f.n.replace(/'/g,"\\'")}');event.stopPropagation()" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px 6px;line-height:1">${isFav?'⭐':'☆'}</button>
     </div>`;
   }).join('');
   sug.style.display='block';
