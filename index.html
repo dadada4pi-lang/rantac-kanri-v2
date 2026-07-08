@@ -708,12 +708,11 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
   </div>
   <div style="padding:12px">
     <div id="calAdminBar" style="display:none;background:#fff3e0;border:1px solid #ffe0b2;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#e65100">
-      ▼ 日付をタップして休日・出勤日を切り替えられます（山田のみ）
+      ▼ 日付をタップして休日を設定・解除できます（山田のみ）
     </div>
     <div style="display:flex;gap:16px;background:#fff;border-radius:10px;padding:10px 14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.07)">
       <div style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:#c0392b"></span>国民の祝日</div>
       <div style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:#1a1a2e"></span>会社休日</div>
-      <div style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:#27ae60"></span>週末出勤</div>
     </div>
     <div id="calGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
     <div id="calSaveStatus" style="text-align:center;font-size:13px;margin-top:12px;color:#27ae60;display:none"></div>
@@ -1304,9 +1303,8 @@ function renderCompanyCal(){
       const isWkend=dow===0||dow===6;
       const label=CAL_NATIONAL_LABEL[iso]||(isCompH&&!isWkend?'会社休日':'');
       let bg='',color='';
-      if(isCompW){bg='#27ae60';color='#fff';}
-      else if(isNat){bg='#c0392b';color='#fff';}
-      else if(isWkend||isCompH){bg='#1a1a2e';color='#fff';}
+      if(isNat){bg='#c0392b';color='#fff';}
+      else if(!isCompW&&(isWkend||isCompH)){bg='#1a1a2e';color='#fff';}
       const txtColor=color?color:(dow===0?'#c0392b':dow===6?'#2471a3':'inherit');
       const clickAttr=isAdmin?`onclick="toggleCalDate('${iso}')" style="cursor:pointer;text-align:center;padding:1px 0"`:'style="text-align:center;padding:1px 0"';
       allCells.push(`<td ${clickAttr} data-iso="${iso}"><div style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:${bg};color:${txtColor};font-size:11px;font-weight:${bg?'700':'400'}">${d}</div>${label?`<div style="font-size:7px;color:#aaa;line-height:1.2">${label}</div>`:''}</td>`);
