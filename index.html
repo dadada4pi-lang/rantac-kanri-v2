@@ -707,11 +707,12 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
   <div class="topbar">
     <button class="back-btn" onclick="goTo('homeScreen')">←</button>
     会社カレンダー
+    <button id="calEditToggleBtn" style="display:none;position:absolute;right:12px;background:#1a73e8;color:#fff;border:none;border-radius:16px;padding:4px 14px;font-size:13px;font-weight:600;cursor:pointer" onclick="toggleCalEditMode()">編集する</button>
     <a href="javascript:logoClick()" style="display:inline-block"><img src="logo.png" class="topbar-logo" alt="RANTAC"></a>
   </div>
   <div style="padding:12px">
     <div id="calAdminBar" style="display:none;background:#fff3e0;border:1px solid #ffe0b2;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#e65100">
-      ▼ 日付をタップして休日を設定・解除できます（山田のみ）
+      ▼ 日付をタップして休日を設定・解除できます
     </div>
     <div style="display:flex;gap:16px;background:#fff;border-radius:10px;padding:10px 14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.07)">
       <div style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:#c0392b"></span>国民の祝日</div>
@@ -792,7 +793,7 @@ function goTo(id){
   if(id==='homeScreen'){ document.getElementById('homeScreen').style.display='flex'; renderTodayDelivery(); }
   if(id==='listScreen'){ window._staffFilter=''; window._rankFilter=''; renderFacilityList(); }
   if(id==='textScreen'){ renderFavs(); }
-  if(id==='calendarScreen'){ renderCompanyCal(); loadCompanyCalAndRefresh(); }
+  if(id==='calendarScreen'){ calEditMode = false; const btn=document.getElementById('calEditToggleBtn'); if(btn){btn.textContent='編集する';btn.style.background='#1a73e8';} renderCompanyCal(); loadCompanyCalAndRefresh(); }
   if(id==='dataScreen'){
     if(currentUser !== 'yamada'){ alert('データ出力は山田さんのみ使用できます'); goTo('homeScreen'); return; }
     renderWorkSummary();
@@ -1292,9 +1293,21 @@ function goToCalendar(){
   renderCompanyCal();
 }
 
+let calEditMode = false;
+
+function toggleCalEditMode(){
+  calEditMode = !calEditMode;
+  const btn = document.getElementById('calEditToggleBtn');
+  if(btn){ btn.textContent = calEditMode ? '完了' : '編集する'; btn.style.background = calEditMode ? '#e53935' : '#1a73e8'; }
+  renderCompanyCal();
+}
+
 function renderCompanyCal(){
   const isAdmin = currentUser === 'yamada';
-  document.getElementById('calAdminBar').style.display = isAdmin ? '' : 'none';
+  const editActive = isAdmin && calEditMode;
+  document.getElementById('calAdminBar').style.display = editActive ? '' : 'none';
+  const editBtn = document.getElementById('calEditToggleBtn');
+  if(editBtn) editBtn.style.display = isAdmin ? '' : 'none';
   const grid = document.getElementById('calGrid');
   const fy = getFiscalStartYear();
   const MONTHS = [
@@ -1319,7 +1332,7 @@ function renderCompanyCal(){
       if(isNat){bg='#c0392b';color='#fff';}
       else if(!isCompW&&(isWkend||isCompH)){bg='#1a1a2e';color='#fff';}
       const txtColor=color?color:(dow===0?'#c0392b':dow===6?'#2471a3':'inherit');
-      const clickAttr=isAdmin?`onclick="toggleCalDate('${iso}')" style="cursor:pointer;text-align:center;padding:1px 0"`:'style="text-align:center;padding:1px 0"';
+      const clickAttr=editActive?`onclick="toggleCalDate('${iso}')" style="cursor:pointer;text-align:center;padding:1px 0"`:'style="text-align:center;padding:1px 0"';
       allCells.push(`<td ${clickAttr} data-iso="${iso}"><div style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:${bg};color:${txtColor};font-size:11px;font-weight:${bg?'700':'400'}">${d}</div>${label?`<div style="font-size:7px;color:#aaa;line-height:1.2">${label}</div>`:''}</td>`);
     }
     while(allCells.length%7!==0) allCells.push('<td></td>');
