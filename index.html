@@ -1258,8 +1258,9 @@ function renderCompanyCal(){
   grid.innerHTML = MONTHS.map(({y,m})=>{
     const daysInMonth = new Date(y,m,0).getDate();
     const startDow = new Date(y,m-1,1).getDay();
-    let cells=[];
-    for(let i=0;i<startDow;i++) cells.push('<td></td>');
+    // 日付セルを7個ずつ行に分ける
+    let allCells = [];
+    for(let i=0;i<startDow;i++) allCells.push('<td></td>');
     for(let d=1;d<=daysInMonth;d++){
       const iso=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const dow=new Date(y,m-1,d).getDay();
@@ -1272,21 +1273,20 @@ function renderCompanyCal(){
       if(isCompW){bg='#27ae60';color='#fff';}
       else if(isNat){bg='#c0392b';color='#fff';}
       else if(isWkend||isCompH){bg='#1a1a2e';color='#fff';}
-      else if(dow===0){color='#c0392b';}
-      else if(dow===6){color='#2471a3';}
-      const clickAttr=isAdmin?`onclick="toggleCalDate('${iso}')" style="cursor:pointer"`:'';
-      cells.push(`<td ${clickAttr} data-iso="${iso}">
-        <div style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:${bg};color:${color||'inherit'};font-size:12px">${d}</div>
-        ${label?`<div style="font-size:8px;color:#888;line-height:1">${label}</div>`:''}
-      </td>`);
-      if((cells.length)%7===0){cells.push('</tr><tr>');}
+      const txtColor=color?color:(dow===0?'#c0392b':dow===6?'#2471a3':'inherit');
+      const clickAttr=isAdmin?`onclick="toggleCalDate('${iso}')" style="cursor:pointer;text-align:center;padding:1px 0"`:'style="text-align:center;padding:1px 0"';
+      allCells.push(`<td ${clickAttr} data-iso="${iso}"><div style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:${bg};color:${txtColor};font-size:11px;font-weight:${bg?'700':'400'}">${d}</div>${label?`<div style="font-size:7px;color:#aaa;line-height:1.2">${label}</div>`:''}</td>`);
     }
-    while(cells.length%7!==0) cells.push('<td></td>');
+    while(allCells.length%7!==0) allCells.push('<td></td>');
+    let rows='';
+    for(let i=0;i<allCells.length;i+=7){
+      rows+=`<tr>${allCells.slice(i,i+7).join('')}</tr>`;
+    }
     return `<div style="background:#fff;border-radius:10px;padding:10px;box-shadow:0 1px 4px rgba(0,0,0,0.07)">
       <div style="font-size:14px;font-weight:700;color:#1a1a2e;margin-bottom:6px">${y}年${m}月</div>
       <table style="width:100%;border-collapse:collapse">
-        <tr>${DOW.map((d,i)=>`<th style="font-size:10px;text-align:center;color:${i===0?'#c0392b':i===6?'#2471a3':'#888'};padding:2px 0">${d}</th>`).join('')}</tr>
-        <tr>${cells.join('')}</tr>
+        <tr>${DOW.map((d,i)=>`<th style="font-size:10px;text-align:center;color:${i===0?'#c0392b':i===6?'#2471a3':'#888'};padding:2px 0;font-weight:600">${d}</th>`).join('')}</tr>
+        ${rows}
       </table>
     </div>`;
   }).join('');
