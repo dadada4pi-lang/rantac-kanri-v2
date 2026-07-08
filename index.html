@@ -760,7 +760,7 @@ function goTo(id){
 }
 
 // ===== GAS URL (must be defined before loadFacilitiesFromGAS IIFE) =====
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbx3GEAugd5XSFN4-IMZqdhBudUgwHl9a_0viApUWo4Lqrgb1GWtRMc4XhWKDRFUKXaP/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwJ3ehIaMzAfr8KarqNjZzZPKinGAVU4GY1fhjvuaDIQqR3i7HeQwrkHlWfaosB_ohM/exec';
 
 // ===== カスタム顧客・機器編集 =====
 const STANDARD_DEVICES = ['分包機','診察台','超音波','ICU','生化学','CBC','眼圧計','スリットランプ','X線','DR,CR','オートクレーブ','EOG','無影灯','手術台','麻酔器','呼吸器','生体モニタ','電気ﾒｽ','シーリング','歯科スケーラー','内視鏡','整形ﾊﾟﾜｰﾂｰﾙ','マイクロエンジ'];
@@ -824,7 +824,7 @@ const ALL_USERS = ['kishi','miyakawa','yamada','imura','goto','sato','tajima','h
 
 // キャッシュバージョン：変更するとすべてのユーザーのキャッシュが自動クリアされる
 (function() {
-  const CACHE_VER = '4';
+  const CACHE_VER = '5';
   if (localStorage.getItem('_cacheVer') !== CACHE_VER) {
     ALL_USERS.forEach(function(u) {
       localStorage.removeItem('att_' + u);
