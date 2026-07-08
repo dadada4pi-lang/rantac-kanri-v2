@@ -2388,7 +2388,10 @@ function renderSrRows() {
       </div>
       <div class="att-section">
         <div class="att-label">訪問先</div>
-        <input id="srFacility_${i}" class="att-input" type="text" placeholder="例：○○病院" value="${r.facility.replace(/"/g,'&quot;')}">
+        <div style="position:relative">
+          <input id="srFacility_${i}" class="att-input" type="text" placeholder="施設名を入力して検索" value="${r.facility.replace(/"/g,'&quot;')}" oninput="srFacSuggest(${i})" onblur="setTimeout(()=>srHideSug(${i}),150)" autocomplete="off">
+          <div id="srFacSug_${i}" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:200px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.1)"></div>
+        </div>
       </div>
       <div class="att-section">
         <div class="att-label">訪問内容</div>
@@ -2403,6 +2406,34 @@ function renderSrRows() {
         <textarea id="srDevice_${i}" class="att-input" rows="2" placeholder="医療機器について" style="resize:none">${r.device}</textarea>
       </div>` : ''}
     </div>`).join('');
+}
+
+function srFacSuggest(i) {
+  const q = (document.getElementById(`srFacility_${i}`)?.value || '').trim();
+  const sug = document.getElementById(`srFacSug_${i}`);
+  if (!sug) return;
+  if (!q) { sug.style.display = 'none'; return; }
+  const nq = normalize(q);
+  const hits = DB.filter(f => {
+    const nn = normalizeDB(f.n);
+    const yomi = Object.entries(YOMI_MAP).filter(([k]) => f.n.includes(k)).map(([,v]) => toKana(v)).join('');
+    return (nn + yomi).includes(nq);
+  }).slice(0, 8);
+  if (!hits.length) { sug.style.display = 'none'; return; }
+  sug.innerHTML = hits.map(f =>
+    `<div style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:14px"
+      onmousedown="srFacSelect(${i},'${f.n.replace(/'/g,"\\'")}')">${f.n}</div>`
+  ).join('');
+  sug.style.display = 'block';
+}
+function srFacSelect(i, name) {
+  const el = document.getElementById(`srFacility_${i}`);
+  if (el) el.value = name;
+  srHideSug(i);
+}
+function srHideSug(i) {
+  const sug = document.getElementById(`srFacSug_${i}`);
+  if (sug) sug.style.display = 'none';
 }
 
 function setNowSr(i) {
