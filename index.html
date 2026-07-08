@@ -68,6 +68,8 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
 /* ===== FACILITY LIST ===== */
 .staff-filter-btn{padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;font-family:inherit}
 .staff-filter-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.rank-filter-btn{padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;font-family:inherit}
+.rank-filter-btn.active{background:#e67e22;color:#fff;border-color:#e67e22}
 .fac-list-item{padding:12px 16px;border-bottom:1px solid var(--border)}
 .fac-list-item.fac-closed{background:var(--danger-soft)}
 .fac-list-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px}
@@ -390,6 +392,15 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
       <button class="staff-filter-btn" onclick="setStaffFilter('会長')" data-staff="会長">会長</button>
       <button class="staff-filter-btn" onclick="setStaffFilter('社長')" data-staff="社長">社長</button>
       <button class="staff-filter-btn" onclick="setStaffFilter('__other__')" data-staff="__other__">その他</button>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+      <button class="rank-filter-btn active" onclick="setRankFilter('')" data-rank="">全ランク</button>
+      <button class="rank-filter-btn" onclick="setRankFilter('A\'')" data-rank="A'">A'</button>
+      <button class="rank-filter-btn" onclick="setRankFilter('A')" data-rank="A">A</button>
+      <button class="rank-filter-btn" onclick="setRankFilter('B')" data-rank="B">B</button>
+      <button class="rank-filter-btn" onclick="setRankFilter('C')" data-rank="C">C</button>
+      <button class="rank-filter-btn" onclick="setRankFilter('D')" data-rank="D">D</button>
+      <button class="rank-filter-btn" onclick="setRankFilter('E')" data-rank="E">E</button>
     </div>
   </div>
   <div id="facilityListBody"></div>
@@ -763,7 +774,7 @@ function goTo(id){
   });
   window.scrollTo(0,0);
   if(id==='homeScreen'){ document.getElementById('homeScreen').style.display='flex'; renderTodayDelivery(); }
-  if(id==='listScreen'){ window._staffFilter=''; renderFacilityList(); }
+  if(id==='listScreen'){ window._staffFilter=''; window._rankFilter=''; renderFacilityList(); }
   if(id==='dataScreen'){
     if(currentUser !== 'yamada'){ alert('データ出力は山田さんのみ使用できます'); goTo('homeScreen'); return; }
     renderWorkSummary();
@@ -1118,6 +1129,11 @@ function setStaffFilter(staff){
   document.querySelectorAll('.staff-filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.staff===staff));
   renderFacilityList();
 }
+function setRankFilter(rank){
+  window._rankFilter=rank;
+  document.querySelectorAll('.rank-filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.rank===rank));
+  renderFacilityList();
+}
 
 function renderFacilityList(){
   const q=document.getElementById('facilitySearchInput')?document.getElementById('facilitySearchInput').value:'';
@@ -1132,6 +1148,8 @@ function renderFacilityList(){
     : DB;
   if(sf==='__other__') list=list.filter(f=>!f.staff||f.staff===''||f.staff==='谷本'||f.staff==='不明');
   else if(sf) list=list.filter(f=>(f.staff||'').includes(sf));
+  const rf=window._rankFilter||'';
+  if(rf) list=list.filter(f=>(f.rank||'')===rf);
   const today=new Date().getDay();
   document.getElementById('facilityListCount').textContent=`${list.length}件`;
   document.getElementById('facilityListBody').innerHTML=list.map((f,i)=>{
