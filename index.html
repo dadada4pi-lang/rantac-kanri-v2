@@ -395,7 +395,6 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
       <button class="rank-filter-btn active" onclick="setRankFilter('')" data-rank="">全ランク</button>
-      <button class="rank-filter-btn" onclick="setRankFilter('A\'')" data-rank="A'">A'</button>
       <button class="rank-filter-btn" onclick="setRankFilter('A')" data-rank="A">A</button>
       <button class="rank-filter-btn" onclick="setRankFilter('B')" data-rank="B">B</button>
       <button class="rank-filter-btn" onclick="setRankFilter('C')" data-rank="C">C</button>
@@ -1149,7 +1148,8 @@ function renderFacilityList(){
   if(sf==='__other__') list=list.filter(f=>!f.staff||f.staff===''||f.staff==='谷本'||f.staff==='不明');
   else if(sf) list=list.filter(f=>(f.staff||'').includes(sf));
   const rf=window._rankFilter||'';
-  if(rf) list=list.filter(f=>(f.rank||'')===rf);
+  if(rf==='A') list=list.filter(f=>(f.rank||'')==='A'||(f.rank||'')==="A'");
+  else if(rf) list=list.filter(f=>(f.rank||'')===rf);
   const today=new Date().getDay();
   document.getElementById('facilityListCount').textContent=`${list.length}件`;
   document.getElementById('facilityListBody').innerHTML=list.map((f,i)=>{
