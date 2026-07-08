@@ -311,20 +311,11 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
 </div>
 
 <div id="passwordScreen" class="screen" style="display:none;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f5">
-  <div class="user-select-card" style="text-align:center;width:min(360px,92vw)">
+  <div class="user-select-card" style="text-align:center">
     <img src="logo.png" alt="RANTAC" class="user-select-logo" style="margin-bottom:8px">
-    <div style="font-size:13px;color:#888;margin-bottom:28px">社内専用システム</div>
-    <input id="loginEmail" type="email" placeholder="メールアドレス" autocomplete="email" inputmode="email"
-      style="width:100%;padding:13px 14px;border:1.5px solid #e3e4e7;border-radius:10px;font-size:16px;outline:none;font-family:inherit;margin-bottom:10px;text-align:left"
-      onfocus="this.style.borderColor='#2454e0'" onblur="this.style.borderColor='#e3e4e7'">
-    <input id="loginPassword" type="password" placeholder="パスワード" autocomplete="current-password"
-      style="width:100%;padding:13px 14px;border:1.5px solid #e3e4e7;border-radius:10px;font-size:16px;outline:none;font-family:inherit;margin-bottom:10px;text-align:left"
-      onfocus="this.style.borderColor='#2454e0'" onblur="this.style.borderColor='#e3e4e7'"
-      onkeydown="if(event.key==='Enter')doEmailLogin()">
-    <div id="loginError" style="color:#e53935;font-size:13px;margin-bottom:10px;display:none">メールアドレスまたはパスワードが正しくありません</div>
-    <button onclick="doEmailLogin()" style="width:100%;background:#2454e0;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;padding:14px;cursor:pointer;font-family:inherit">ログイン</button>
-    <div id="googleSignInBtn" style="display:none"></div>
-    <div id="googleSignInError" style="display:none"></div>
+    <div style="font-size:13px;color:#888;margin-bottom:32px">社内専用システム</div>
+    <div id="googleSignInBtn"></div>
+    <div id="googleSignInError" style="color:#e53935;font-size:13px;margin-top:16px;display:none">このアカウントはアクセス権がありません</div>
   </div>
 </div>
 
@@ -3216,22 +3207,6 @@ const EMAIL_TO_USER = {
   'rantac.kishi@gmail.com': 'kishi',
   'dadada4pi@gmail.com': 'yamada'
 };
-
-function doEmailLogin() {
-  const email = (document.getElementById('loginEmail').value || '').trim().toLowerCase();
-  const pw    = (document.getElementById('loginPassword').value || '');
-  const errEl = document.getElementById('loginError');
-  const userId = EMAIL_TO_USER[email];
-  if (!userId || USER_PASSWORDS[userId] !== pw) {
-    errEl.style.display = 'block';
-    document.getElementById('loginPassword').value = '';
-    return;
-  }
-  errEl.style.display = 'none';
-  localStorage.setItem('_auth_v2', '1');
-  localStorage.setItem('_authedEmail', email);
-  _doSelectUser(userId);
-}
 
 function startGoogleLogin() {
   const nonce = Math.random().toString(36).slice(2);
