@@ -780,7 +780,7 @@ function goTo(id){
   if(id==='homeScreen'){ document.getElementById('homeScreen').style.display='flex'; renderTodayDelivery(); }
   if(id==='listScreen'){ window._staffFilter=''; window._rankFilter=''; renderFacilityList(); }
   if(id==='textScreen'){ renderFavs(); }
-  if(id==='calendarScreen'){ renderCompanyCal(); }
+  if(id==='calendarScreen'){ renderCompanyCal(); loadCompanyCalAndRefresh(); }
   if(id==='dataScreen'){
     if(currentUser !== 'yamada'){ alert('データ出力は山田さんのみ使用できます'); goTo('homeScreen'); return; }
     renderWorkSummary();
@@ -1233,6 +1233,19 @@ function loadCompanyCal(){
       if(!data||typeof data!=='object') return;
       localStorage.setItem('companyCal', JSON.stringify(data));
       applyCompanyCal(data);
+    }).catch(()=>{});
+}
+
+function loadCompanyCalAndRefresh(){
+  fetch(GAS_URL + '?type=get_company_cal')
+    .then(r=>r.json())
+    .then(data=>{
+      if(!data||typeof data!=='object') return;
+      localStorage.setItem('companyCal', JSON.stringify(data));
+      applyCompanyCal(data);
+      // カレンダー画面が開いたままなら再描画
+      const cal = document.getElementById('calendarScreen');
+      if(cal && cal.style.display !== 'none') renderCompanyCal();
     }).catch(()=>{});
 }
 
