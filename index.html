@@ -1209,11 +1209,18 @@ function isHoliday(dateStr){
 function isBusinessDay(dateStr){ return !isHoliday(dateStr); }
 
 // ===== 会社カレンダー =====
+// 国民の祝日（複数年度分）
 const CAL_NATIONAL = new Set([
+  // 2026年度（4月〜3月）
   '2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-05-06',
   '2026-07-20','2026-08-11','2026-09-21','2026-09-22','2026-09-23',
   '2026-10-12','2026-11-03','2026-11-23',
   '2027-01-01','2027-01-11','2027-02-11','2027-02-23','2027-03-21','2027-03-22',
+  // 2027年度（4月〜3月）
+  '2027-04-29','2027-05-03','2027-05-04','2027-05-05',
+  '2027-07-19','2027-08-11','2027-09-20','2027-09-23',
+  '2027-10-11','2027-11-03','2027-11-23',
+  '2028-01-01','2028-01-10','2028-02-11','2028-02-23','2028-03-20',
 ]);
 const CAL_NATIONAL_LABEL = {
   '2026-04-29':'昭和の日','2026-05-03':'憲法記念日','2026-05-04':'みどりの日',
@@ -1222,28 +1229,42 @@ const CAL_NATIONAL_LABEL = {
   '2026-09-23':'秋分の日','2026-10-12':'スポーツの日','2026-11-03':'文化の日',
   '2026-11-23':'勤労感謝','2027-01-01':'元日','2027-01-11':'成人の日',
   '2027-02-11':'建国記念','2027-02-23':'天皇誕生日','2027-03-21':'春分の日','2027-03-22':'振替休日',
+  '2027-04-29':'昭和の日','2027-05-03':'憲法記念日','2027-05-04':'みどりの日',
+  '2027-05-05':'こどもの日','2027-07-19':'海の日','2027-08-11':'山の日',
+  '2027-09-20':'敬老の日','2027-09-23':'秋分の日','2027-10-11':'スポーツの日',
+  '2027-11-03':'文化の日','2027-11-23':'勤労感謝',
+  '2028-01-01':'元日','2028-01-10':'成人の日','2028-02-11':'建国記念',
+  '2028-02-23':'天皇誕生日','2028-03-20':'春分の日',
 };
 
+// 現在の年度開始年を返す（4月始まり）
+function getFiscalStartYear(){
+  const now = new Date();
+  return now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+}
+function getCalKey(){ return 'companyCal_' + getFiscalStartYear(); }
+
 function loadCompanyCal(){
-  const cached = localStorage.getItem('companyCal');
+  const key = getCalKey();
+  const cached = localStorage.getItem(key);
   if(cached){ try{ applyCompanyCal(JSON.parse(cached)); }catch(e){} }
-  fetch(GAS_URL + '?type=get_company_cal')
+  fetch(GAS_URL + '?type=get_company_cal&year=' + getFiscalStartYear())
     .then(r=>r.json())
     .then(data=>{
       if(!data||typeof data!=='object') return;
-      localStorage.setItem('companyCal', JSON.stringify(data));
+      localStorage.setItem(key, JSON.stringify(data));
       applyCompanyCal(data);
     }).catch(()=>{});
 }
 
 function loadCompanyCalAndRefresh(){
-  fetch(GAS_URL + '?type=get_company_cal')
+  const key = getCalKey();
+  fetch(GAS_URL + '?type=get_company_cal&year=' + getFiscalStartYear())
     .then(r=>r.json())
     .then(data=>{
       if(!data||typeof data!=='object') return;
-      localStorage.setItem('companyCal', JSON.stringify(data));
+      localStorage.setItem(key, JSON.stringify(data));
       applyCompanyCal(data);
-      // カレンダー画面が開いたままなら再描画
       const cal = document.getElementById('calendarScreen');
       if(cal && cal.style.display !== 'none') renderCompanyCal();
     }).catch(()=>{});
@@ -1263,15 +1284,15 @@ function renderCompanyCal(){
   const isAdmin = currentUser === 'yamada';
   document.getElementById('calAdminBar').style.display = isAdmin ? '' : 'none';
   const grid = document.getElementById('calGrid');
+  const fy = getFiscalStartYear();
   const MONTHS = [
-    {y:2026,m:4},{y:2026,m:5},{y:2026,m:6},{y:2026,m:7},{y:2026,m:8},{y:2026,m:9},
-    {y:2026,m:10},{y:2026,m:11},{y:2026,m:12},{y:2027,m:1},{y:2027,m:2},{y:2027,m:3},
+    {y:fy,m:4},{y:fy,m:5},{y:fy,m:6},{y:fy,m:7},{y:fy,m:8},{y:fy,m:9},
+    {y:fy,m:10},{y:fy,m:11},{y:fy,m:12},{y:fy+1,m:1},{y:fy+1,m:2},{y:fy+1,m:3},
   ];
   const DOW=['日','月','火','水','木','金','土'];
   grid.innerHTML = MONTHS.map(({y,m})=>{
     const daysInMonth = new Date(y,m,0).getDate();
     const startDow = new Date(y,m-1,1).getDay();
-    // 日付セルを7個ずつ行に分ける
     let allCells = [];
     for(let i=0;i<startDow;i++) allCells.push('<td></td>');
     for(let d=1;d<=daysInMonth;d++){
@@ -1310,11 +1331,9 @@ function toggleCalDate(iso){
   const d = new Date(iso+'T00:00:00');
   const isWkend = d.getDay()===0||d.getDay()===6;
   if(isWkend){
-    // 週末 → 出勤日切り替え
     if(COMPANY_WORKDAYS.has(iso)) COMPANY_WORKDAYS.delete(iso);
     else COMPANY_WORKDAYS.add(iso);
   } else {
-    // 平日/祝日 → 会社休日切り替え
     if(COMPANY_HOLIDAYS.has(iso)) COMPANY_HOLIDAYS.delete(iso);
     else COMPANY_HOLIDAYS.add(iso);
   }
@@ -1323,10 +1342,11 @@ function toggleCalDate(iso){
 }
 
 function saveCompanyCal(){
+  const key = getCalKey();
   const data = { holidays: [...COMPANY_HOLIDAYS], workdays: [...COMPANY_WORKDAYS] };
-  localStorage.setItem('companyCal', JSON.stringify(data));
+  localStorage.setItem(key, JSON.stringify(data));
   const fd = new FormData();
-  fd.append('data', JSON.stringify({ type: 'save_company_cal', holidays: [...COMPANY_HOLIDAYS], workdays: [...COMPANY_WORKDAYS] }));
+  fd.append('data', JSON.stringify({ type: 'save_company_cal', year: getFiscalStartYear(), holidays: [...COMPANY_HOLIDAYS], workdays: [...COMPANY_WORKDAYS] }));
   fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: fd })
     .then(()=>{
       const st = document.getElementById('calSaveStatus');
