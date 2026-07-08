@@ -296,6 +296,20 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
 <!-- ===== LOGIN (Google OAuth) ===== -->
 <div id="offlineBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#e53935;color:#fff;text-align:center;font-size:13px;font-weight:600;padding:6px">オフラインです。ネット接続を確認してください。</div>
 
+<!-- ===== パスワードモーダル ===== -->
+<div id="pwModal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.45);align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:32px 28px;width:min(340px,90vw);text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.18)">
+    <div id="pwModalTitle" style="font-size:17px;font-weight:700;color:#17181c;margin-bottom:20px"></div>
+    <input id="pwModalInput" type="password" placeholder="パスワード" autocomplete="current-password"
+      style="width:100%;padding:13px 14px;border:1.5px solid #e3e4e7;border-radius:10px;font-size:16px;outline:none;font-family:inherit;margin-bottom:8px"
+      oninput="document.getElementById('pwModalError').style.display='none'"
+      onkeydown="if(event.key==='Enter')pwModalSubmit()">
+    <div id="pwModalError" style="color:#e53935;font-size:13px;margin-bottom:12px;display:none">パスワードが違います</div>
+    <button onclick="pwModalSubmit()" style="width:100%;background:#2454e0;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;padding:14px;cursor:pointer;font-family:inherit;margin-bottom:10px">ログイン</button>
+    <button onclick="pwModalCancel()" style="width:100%;background:none;border:none;color:#86868c;font-size:14px;cursor:pointer;font-family:inherit;padding:6px">キャンセル</button>
+  </div>
+</div>
+
 <div id="passwordScreen" class="screen" style="display:none;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f5">
   <div class="user-select-card" style="text-align:center">
     <img src="logo.png" alt="RANTAC" class="user-select-logo" style="margin-bottom:8px">
@@ -2071,12 +2085,40 @@ function getBreakForHalfDay(halfDay) {
 
 const USER_PASSWORDS = { yamada:'rantac1', goto:'rantac2', sato:'rantac3', imura:'rantac4', tajima:'rantac5', kishi:'rantac6', horiuchi:'rantac7', miyakawa:'rantac8' };
 
+let _pwPendingUser = null;
+
 function selectUser(user) {
   if (USER_PASSWORDS[user]) {
-    const input = prompt(USER_NAMES[user] + 'のパスワードを入力してください');
-    if (input === null) return;
-    if (input !== USER_PASSWORDS[user]) { alert('パスワードが違います'); return; }
+    _pwPendingUser = user;
+    document.getElementById('pwModalTitle').textContent = USER_NAMES[user] + 'のパスワードを入力してください';
+    document.getElementById('pwModalInput').value = '';
+    document.getElementById('pwModalError').style.display = 'none';
+    const modal = document.getElementById('pwModal');
+    modal.style.display = 'flex';
+    setTimeout(() => document.getElementById('pwModalInput').focus(), 100);
+    return;
   }
+  _doSelectUser(user);
+}
+
+function pwModalSubmit() {
+  const input = document.getElementById('pwModalInput').value;
+  if (input !== USER_PASSWORDS[_pwPendingUser]) {
+    document.getElementById('pwModalError').style.display = 'block';
+    document.getElementById('pwModalInput').value = '';
+    return;
+  }
+  document.getElementById('pwModal').style.display = 'none';
+  _doSelectUser(_pwPendingUser);
+  _pwPendingUser = null;
+}
+
+function pwModalCancel() {
+  document.getElementById('pwModal').style.display = 'none';
+  _pwPendingUser = null;
+}
+
+function _doSelectUser(user) {
   currentUser = user;
   localStorage.setItem('currentUser', user);
   updateUserUI();
