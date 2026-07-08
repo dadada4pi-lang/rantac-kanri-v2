@@ -2889,6 +2889,20 @@ function renderDelivLogScreen() {
       ${USER_NAMES[u]||u}</button>`;
   }).join('');
   renderDelivLogBody();
+  // GASから最新の配達記録を取得してlocalStorageに反映
+  users.forEach(u => {
+    fetch(GAS_URL + '?type=get_delivery&user=' + u)
+      .then(r => r.json())
+      .then(data => {
+        if (!data || typeof data !== 'object') return;
+        Object.entries(data).forEach(([date, names]) => {
+          if (Array.isArray(names) && names.length) {
+            localStorage.setItem(`deliveryLog_${u}_${date}`, JSON.stringify(names));
+          }
+        });
+        if (u === _delivLogUser) renderDelivLogBody();
+      }).catch(() => {});
+  });
 }
 
 function switchDelivLogUser(u) {
