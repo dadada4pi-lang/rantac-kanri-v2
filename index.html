@@ -329,7 +329,7 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
     <div class="user-btn-grid" id="userBtnContainer"></div>
     <script>
     (function(){
-      var users=[{id:'kishi',name:'岸'},{id:'miyakawa',name:'宮川'},{id:'goto',name:'後藤'},{id:'sato',name:'佐藤'},{id:'imura',name:'井村'},{id:'tajima',name:'田嶋'},{id:'yamada',name:'山田'},{id:'horiuchi',name:'堀内'},{id:'kamiya',name:'社長'},{id:'kaicho',name:'会長'}];
+      var users=[{id:'sato',name:'佐藤'},{id:'kaicho',name:'会長'},{id:'goto',name:'後藤'},{id:'tajima',name:'田嶋'},{id:'horiuchi',name:'堀内'},{id:'yamada',name:'山田'},{id:'kamiya',name:'社長'},{id:'imura',name:'井村'},{id:'miyakawa',name:'宮川'},{id:'kishi',name:'岸'}];
       var c=document.getElementById('userBtnContainer');
       users.forEach(function(u){var b=document.createElement('button');b.className='user-sel-btn';b.setAttribute('onclick','selectUser("'+u.id+'")');b.textContent=u.name;c.appendChild(b);});
     })();
