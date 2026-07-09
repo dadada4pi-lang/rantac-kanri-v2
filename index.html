@@ -329,7 +329,7 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
     <div class="user-btn-grid" id="userBtnContainer"></div>
     <script>
     (function(){
-      var users=[{id:'yamada',name:'山田'},{id:'kamiya',name:'社長'},{id:'imura',name:'井村'},{id:'goto',name:'後藤'},{id:'sato',name:'佐藤'},{id:'kishi',name:'岸'},{id:'miyakawa',name:'宮川'},{id:'tajima',name:'田嶋'},{id:'horiuchi',name:'堀内'}];
+      var users=[{id:'yamada',name:'山田'},{id:'kamiya',name:'社長'},{id:'kaicho',name:'会長'},{id:'imura',name:'井村'},{id:'goto',name:'後藤'},{id:'sato',name:'佐藤'},{id:'kishi',name:'岸'},{id:'miyakawa',name:'宮川'},{id:'tajima',name:'田嶋'},{id:'horiuchi',name:'堀内'}];
       var c=document.getElementById('userBtnContainer');
       users.forEach(function(u){var b=document.createElement('button');b.className='user-sel-btn';b.setAttribute('onclick','selectUser("'+u.id+'")');b.textContent=u.name;c.appendChild(b);});
     })();
@@ -2273,7 +2273,7 @@ function applyOcrAndRoute(){
 let currentUser = localStorage.getItem('currentUser') || null;
 let srRows = [];
 
-const USER_NAMES = { kishi:'岸さん', miyakawa:'宮川さん', yamada:'山田さん', kamiya:'社長', imura:'井村さん', goto:'後藤さん', sato:'佐藤さん', tajima:'田嶋さん', horiuchi:'堀内さん' };
+const USER_NAMES = { kishi:'岸さん', miyakawa:'宮川さん', yamada:'山田さん', kamiya:'社長', kaicho:'会長', imura:'井村さん', goto:'後藤さん', sato:'佐藤さん', tajima:'田嶋さん', horiuchi:'堀内さん' };
 const USER_SHEETS = {
   kishi:    'https://docs.google.com/spreadsheets/d/1byO083Zva9r2hux8bae04rsLTyhbFZJrwP6gpuyy_IE',
   miyakawa: 'https://docs.google.com/spreadsheets/d/1narWnwikGWoqgJBZUPObubR0X62KRVO1Y5YcwUIshz4',
@@ -2314,7 +2314,7 @@ function getBreakForHalfDay(halfDay) {
   return getDefaultBreak();
 }
 
-const USER_PASSWORDS = { yamada:'rantac1', kamiya:'rantac', goto:'rantac2', sato:'rantac3', imura:'rantac4', tajima:'rantac5', kishi:'rantac6', horiuchi:'rantac7', miyakawa:'rantac8' };
+const USER_PASSWORDS = { yamada:'rantac1', kamiya:'rantac', kaicho:'rantac', goto:'rantac2', sato:'rantac3', imura:'rantac4', tajima:'rantac5', kishi:'rantac6', horiuchi:'rantac7', miyakawa:'rantac8' };
 
 let _pwPendingUser = null;
 
@@ -2363,9 +2363,9 @@ function updateUserUI() {
   if (badge) badge.textContent = name;
   const link = document.getElementById('sheetLink');
   if (link) link.href = USER_SHEETS[currentUser] || '#';
-  const isManager = currentUser === 'yamada' || currentUser === 'kamiya';
+  const isManager = currentUser === 'yamada' || currentUser === 'kamiya' || currentUser === 'kaicho';
   const attBtn = document.getElementById('attBtn');
-  if (attBtn) attBtn.style.display = currentUser === 'kamiya' ? 'none' : '';
+  if (attBtn) attBtn.style.display = (currentUser === 'kamiya' || currentUser === 'kaicho') ? 'none' : '';
   const dataBtn = document.getElementById('dataBtn');
   if (dataBtn) dataBtn.style.display = isManager ? '' : 'none';
   const reportBtn = document.getElementById('reportBtn');
@@ -3273,7 +3273,7 @@ let _myDataTab = 'att';
           refreshing = false;
           indicator.style.height = '0';
         };
-        if (typeof currentUser !== 'undefined' && (currentUser === 'yamada' || currentUser === 'kamiya')) {
+        if (typeof currentUser !== 'undefined' && (currentUser === 'yamada' || currentUser === 'kamiya' || currentUser === 'kaicho')) {
           loadAllDataFromGAS(); setTimeout(done, 2000);
         } else {
           loadMyDataFromGAS(); setTimeout(done, 2000);
@@ -3288,7 +3288,7 @@ let _myDataTab = 'att';
 
 function renderMyData() {
   _myDataUser = _myDataUser || currentUser;
-  const isYamada = currentUser === 'yamada' || currentUser === 'kamiya';
+  const isYamada = currentUser === 'yamada' || currentUser === 'kamiya' || currentUser === 'kaicho';
   const users = ['yamada','imura','goto','sato','kishi','miyakawa','tajima','horiuchi'];
 
   // 管理者のみユーザータブを表示
@@ -3491,6 +3491,7 @@ const EMAIL_TO_USER = {
   'rantac.kishi@gmail.com': 'kishi',
   'miyagawa.rantac@gmail.com': 'miyakawa',
   'kamiya@rantac.jp': 'kamiya',
+  'mikio@rantac.jp': 'kaicho',
   'dadada4pi@gmail.com': 'yamada'
 };
 
