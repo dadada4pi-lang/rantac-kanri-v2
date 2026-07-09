@@ -329,7 +329,7 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
     <div class="user-btn-grid" id="userBtnContainer"></div>
     <script>
     (function(){
-      var users=[{id:'yamada',name:'山田'},{id:'imura',name:'井村'},{id:'goto',name:'後藤'},{id:'sato',name:'佐藤'},{id:'kishi',name:'岸'},{id:'miyakawa',name:'宮川'},{id:'tajima',name:'田嶋'},{id:'horiuchi',name:'堀内'}];
+      var users=[{id:'yamada',name:'山田'},{id:'kamiya',name:'社長'},{id:'imura',name:'井村'},{id:'goto',name:'後藤'},{id:'sato',name:'佐藤'},{id:'kishi',name:'岸'},{id:'miyakawa',name:'宮川'},{id:'tajima',name:'田嶋'},{id:'horiuchi',name:'堀内'}];
       var c=document.getElementById('userBtnContainer');
       users.forEach(function(u){var b=document.createElement('button');b.className='user-sel-btn';b.setAttribute('onclick','selectUser("'+u.id+'")');b.textContent=u.name;c.appendChild(b);});
     })();
@@ -348,7 +348,7 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
     <div class="home-greeting">お疲れ様です</div>
     <button class="btn-home-go" onclick="goTo('methodScreen')">配達に行く</button>
     <div class="home-list">
-      <button class="home-list-item" onclick="openAttendance()">出退勤を記録する<span class="home-list-chevron">›</span></button>
+      <button class="home-list-item" id="attBtn" onclick="openAttendance()">出退勤を記録する<span class="home-list-chevron">›</span></button>
       <button class="home-list-item" id="myDataBtn" onclick="goTo('myDataScreen')">全員の出退勤・報告書を見る<span class="home-list-chevron">›</span></button>
       <button class="home-list-item" id="reportBtn" onclick="openReport()">報告書を作成する<span class="home-list-chevron">›</span></button>
       <button class="home-list-item" onclick="goTo('delivLogScreen')">配達記録を見る<span class="home-list-chevron">›</span></button>
@@ -795,11 +795,11 @@ function goTo(id){
   if(id==='textScreen'){ renderFavs(); }
   if(id==='calendarScreen'){ calEditMode = false; const btn=document.getElementById('calEditToggleBtn'); if(btn){btn.textContent='編集する';btn.style.background='#1a73e8';} renderCompanyCal(); loadCompanyCalAndRefresh(); }
   if(id==='dataScreen'){
-    if(currentUser !== 'yamada'){ alert('データ出力は山田さんのみ使用できます'); goTo('homeScreen'); return; }
+    if(currentUser !== 'yamada' && currentUser !== 'kamiya'){ alert('データ出力は管理者のみ使用できます'); goTo('homeScreen'); return; }
     renderWorkSummary();
     loadAllDataFromGAS();
   }
-  if(id==='myDataScreen'){ renderMyData(); if(currentUser==='yamada') loadAllDataFromGAS(); else loadMyDataFromGAS(); }
+  if(id==='myDataScreen'){ renderMyData(); if(currentUser==='yamada'||currentUser==='kamiya') loadAllDataFromGAS(); else loadMyDataFromGAS(); }
   if(id==='delivLogScreen'){ renderDelivLogScreen(); }
 }
 
@@ -2273,7 +2273,7 @@ function applyOcrAndRoute(){
 let currentUser = localStorage.getItem('currentUser') || null;
 let srRows = [];
 
-const USER_NAMES = { kishi:'岸さん', miyakawa:'宮川さん', yamada:'山田さん', imura:'井村さん', goto:'後藤さん', sato:'佐藤さん', tajima:'田嶋さん', horiuchi:'堀内さん' };
+const USER_NAMES = { kishi:'岸さん', miyakawa:'宮川さん', yamada:'山田さん', kamiya:'社長', imura:'井村さん', goto:'後藤さん', sato:'佐藤さん', tajima:'田嶋さん', horiuchi:'堀内さん' };
 const USER_SHEETS = {
   kishi:    'https://docs.google.com/spreadsheets/d/1byO083Zva9r2hux8bae04rsLTyhbFZJrwP6gpuyy_IE',
   miyakawa: 'https://docs.google.com/spreadsheets/d/1narWnwikGWoqgJBZUPObubR0X62KRVO1Y5YcwUIshz4',
@@ -2314,7 +2314,7 @@ function getBreakForHalfDay(halfDay) {
   return getDefaultBreak();
 }
 
-const USER_PASSWORDS = { yamada:'rantac1', goto:'rantac2', sato:'rantac3', imura:'rantac4', tajima:'rantac5', kishi:'rantac6', horiuchi:'rantac7', miyakawa:'rantac8' };
+const USER_PASSWORDS = { yamada:'rantac1', kamiya:'rantac', goto:'rantac2', sato:'rantac3', imura:'rantac4', tajima:'rantac5', kishi:'rantac6', horiuchi:'rantac7', miyakawa:'rantac8' };
 
 let _pwPendingUser = null;
 
@@ -2363,14 +2363,17 @@ function updateUserUI() {
   if (badge) badge.textContent = name;
   const link = document.getElementById('sheetLink');
   if (link) link.href = USER_SHEETS[currentUser] || '#';
+  const isManager = currentUser === 'yamada' || currentUser === 'kamiya';
+  const attBtn = document.getElementById('attBtn');
+  if (attBtn) attBtn.style.display = currentUser === 'kamiya' ? 'none' : '';
   const dataBtn = document.getElementById('dataBtn');
-  if (dataBtn) dataBtn.style.display = currentUser === 'yamada' ? '' : 'none';
+  if (dataBtn) dataBtn.style.display = isManager ? '' : 'none';
   const reportBtn = document.getElementById('reportBtn');
-  if (reportBtn) reportBtn.style.display = currentUser === 'yamada' ? 'none' : '';
+  if (reportBtn) reportBtn.style.display = isManager ? 'none' : '';
   const migrateArea = document.getElementById('migrateBtnArea');
   if (migrateArea) migrateArea.style.display = (currentUser === 'yamada' && !localStorage.getItem('_gasMigrated')) ? '' : 'none';
   const myDataBtn = document.getElementById('myDataBtn');
-  if (myDataBtn) myDataBtn.innerHTML = (currentUser === 'yamada' ? '全員の出退勤・報告書を見る' : '自分の出退勤・報告書を見る') + '<span class="home-list-chevron">›</span>';
+  if (myDataBtn) myDataBtn.innerHTML = (isManager ? '全員の出退勤・報告書を見る' : '自分の出退勤・報告書を見る') + '<span class="home-list-chevron">›</span>';
   updateHomeDate();
   renderTodayDelivery();
   const at = document.getElementById('attTitle');
@@ -3270,7 +3273,7 @@ let _myDataTab = 'att';
           refreshing = false;
           indicator.style.height = '0';
         };
-        if (typeof currentUser !== 'undefined' && currentUser === 'yamada') {
+        if (typeof currentUser !== 'undefined' && (currentUser === 'yamada' || currentUser === 'kamiya')) {
           loadAllDataFromGAS(); setTimeout(done, 2000);
         } else {
           loadMyDataFromGAS(); setTimeout(done, 2000);
@@ -3285,10 +3288,10 @@ let _myDataTab = 'att';
 
 function renderMyData() {
   _myDataUser = _myDataUser || currentUser;
-  const isYamada = currentUser === 'yamada';
+  const isYamada = currentUser === 'yamada' || currentUser === 'kamiya';
   const users = ['yamada','imura','goto','sato','kishi','miyakawa','tajima','horiuchi'];
 
-  // 山田のみユーザータブを表示
+  // 管理者のみユーザータブを表示
   const tabsEl = document.getElementById('myDataUserTabs');
   const tabInner = document.getElementById('myDataUserTabInner');
   if (isYamada) {
@@ -3487,6 +3490,7 @@ const EMAIL_TO_USER = {
   'rantac.horiuchi@gmail.com': 'horiuchi',
   'rantac.kishi@gmail.com': 'kishi',
   'miyagawa.rantac@gmail.com': 'miyakawa',
+  'kamiya@rantac.jp': 'kamiya',
   'dadada4pi@gmail.com': 'yamada'
 };
 
