@@ -560,7 +560,7 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
       <button id="delivTabMiyakawa" class="btn-secondary" style="flex:1" onclick="switchDelivTab('miyakawa')">宮川さん</button>
     </div>
     <div id="delivDetail" style="margin-bottom:16px"></div>
-    <div style="border-top:1px solid #f0f0f0;padding-top:14px;margin-top:4px">
+    <div id="dataDeleteSection" style="border-top:1px solid #f0f0f0;padding-top:14px;margin-top:4px">
       <div class="sec-label">データ削除</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         <button class="btn-secondary" style="flex:1;min-width:120px;color:#e53935" onclick="clearData('kishi')">岸さん削除</button>
@@ -795,7 +795,9 @@ function goTo(id){
   if(id==='textScreen'){ renderFavs(); }
   if(id==='calendarScreen'){ calEditMode = false; const btn=document.getElementById('calEditToggleBtn'); if(btn){btn.textContent='編集する';btn.style.background='#1a73e8';} renderCompanyCal(); loadCompanyCalAndRefresh(); }
   if(id==='dataScreen'){
-    if(currentUser !== 'yamada' && currentUser !== 'kamiya'){ alert('データ出力は管理者のみ使用できます'); goTo('homeScreen'); return; }
+    if(currentUser !== 'yamada' && currentUser !== 'kamiya' && currentUser !== 'kaicho'){ alert('データ出力は管理者のみ使用できます'); goTo('homeScreen'); return; }
+    const delSec = document.getElementById('dataDeleteSection');
+    if(delSec) delSec.style.display = isReadOnly() ? 'none' : '';
     renderWorkSummary();
     loadAllDataFromGAS();
   }
@@ -990,7 +992,10 @@ function openFacilityDetail(idx) {
   document.getElementById('facilityDetailModal').classList.add('open');
 }
 
+function isReadOnly(){ return currentUser === 'kaicho'; }
+
 function openDeviceEdit(){
+  if(isReadOnly()){ alert('会長は閲覧のみです'); return; }
   const f = DB[_currentFacIdx];
   if(!f) return;
   const devOverride = getDeviceEdits(f.n);
@@ -1081,10 +1086,12 @@ function closeAddFacModal(){
 let _editFacIdx = null;
 
 function openEditFacility(){
+  if(isReadOnly()){ alert('会長は閲覧のみです'); return; }
   openAddFacModal(_currentFacIdx);
 }
 
 function deleteFacility(){
+  if(isReadOnly()){ alert('会長は閲覧のみです'); return; }
   const f = DB[_currentFacIdx];
   if(!f) return;
   if(!confirm(`「${f.n}」を削除しますか？`)) return;
@@ -3192,6 +3199,7 @@ function downloadCSV(type, user) {
 }
 
 function clearData(user) {
+  if(isReadOnly()){ alert('会長は閲覧のみです'); return; }
   const name = USER_NAMES[user] || user;
   if (!confirm(`${name}のデータをすべて削除しますか？\nアプリとスプレッドシートの両方から削除されます。`)) return;
   localStorage.removeItem('att_' + user);
@@ -3202,6 +3210,7 @@ function clearData(user) {
 }
 
 function deleteAttRecord(user, date) {
+  if(isReadOnly()){ alert('会長は閲覧のみです'); return; }
   if (!confirm(`${date} の出退勤を削除しますか？`)) return;
   const arr = JSON.parse(localStorage.getItem('att_' + user) || '[]');
   const newArr = arr.filter(r => r.date !== date);
@@ -3211,6 +3220,7 @@ function deleteAttRecord(user, date) {
 }
 
 function deleteRepDate(user, date) {
+  if(isReadOnly()){ alert('会長は閲覧のみです'); return; }
   if (!confirm(`${date} の報告書をすべて削除しますか？`)) return;
   const arr = JSON.parse(localStorage.getItem('rep_' + user) || '[]');
   const newArr = arr.filter(r => r.date !== date);
@@ -3220,6 +3230,7 @@ function deleteRepDate(user, date) {
 }
 
 function deleteRepRecord(user, date, visitTime, facility) {
+  if(isReadOnly()){ alert('会長は閲覧のみです'); return; }
   if (!confirm(`「${facility}」の記録を削除しますか？`)) return;
   const arr = JSON.parse(localStorage.getItem('rep_' + user) || '[]');
   let deleted = false;
