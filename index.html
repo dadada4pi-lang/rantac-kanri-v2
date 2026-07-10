@@ -3486,13 +3486,25 @@ function applyMonthFilter() {
   });
 }
 
+function getAttPeriodKey(dateStr) {
+  const parts = (dateStr||'').split('-').map(Number);
+  if (parts.length < 3) return (dateStr||'').slice(0,7);
+  const [y, mo, d] = parts;
+  if (d >= 21) {
+    const pm = mo === 12 ? 1 : mo + 1;
+    const py = mo === 12 ? y + 1 : y;
+    return `${py}-${String(pm).padStart(2,'0')}`;
+  }
+  return `${y}-${String(mo).padStart(2,'0')}`;
+}
+
 function renderMyAttHTML(user) {
   const arr = JSON.parse(localStorage.getItem('att_' + user) || '[]');
   if (!arr.length) return '<div style="text-align:center;color:#aaa;padding:40px 0;font-size:14px">記録がありません</div>';
 
   const months = {};
   [...arr].sort((a,b) => b.date > a.date ? 1 : -1).forEach(r => {
-    const m = (r.date||'').slice(0,7);
+    const m = getAttPeriodKey(r.date);
     if (!months[m]) months[m] = [];
     months[m].push(r);
   });
@@ -3501,6 +3513,9 @@ function renderMyAttHTML(user) {
   return Object.keys(months).sort().reverse().map(month => {
     const records = months[month];
     const [y,m] = month.split('-');
+    const prevM = parseInt(m) === 1 ? 12 : parseInt(m) - 1;
+    const prevY = parseInt(m) === 1 ? parseInt(y) - 1 : parseInt(y);
+    const periodLabel = `${prevY}/${prevM}/21〜${parseInt(y)}/${parseInt(m)}/20`;
     const rows = records.map(r => {
       const mins = calcWorkMin(r.clockIn, r.clockOut, r.breakMin);
       const otMin = isSales ? Math.max(0, (mins||0) - 450) : null;
@@ -3518,10 +3533,11 @@ function renderMyAttHTML(user) {
       ? records.reduce((s,r) => s + Math.max(0, (calcWorkMin(r.clockIn, r.clockOut, r.breakMin)||0) - 450), 0)
       : records.reduce((s,r) => s + (calcWorkMin(r.clockIn, r.clockOut, r.breakMin)||0), 0);
     return `<div data-month="${month}" style="margin-bottom:16px;background:#fff;border-radius:12px;padding:12px;box-shadow:0 1px 4px rgba(0,0,0,.07)">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span style="font-size:15px;font-weight:800">${y}年${parseInt(m)}月</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
+        <span style="font-size:15px;font-weight:800">${parseInt(y)}年${parseInt(m)}月</span>
         <span style="font-size:14px;font-weight:700;color:#1a56db">${isSales?'残業合計':'合計'} ${isSales ? fmtMinOt(totalMin) : fmtMin(totalMin)}</span>
       </div>
+      <div style="font-size:11px;color:#aaa;margin-bottom:8px">${periodLabel}</div>
       ${rows}
     </div>`;
   }).join('');
