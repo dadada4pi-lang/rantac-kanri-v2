@@ -1056,6 +1056,7 @@ function saveDeviceEdits(){
 }
 
 function openAddFacModal(editIdx=null){
+  if(isReadOnly()){ alert('会長は閲覧のみです'); return; }
   _editFacIdx = editIdx;
   const isEdit = editIdx !== null;
   document.getElementById('addFacTitle').textContent = isEdit ? '顧客情報を編集' : '新規顧客追加';
