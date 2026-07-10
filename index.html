@@ -880,7 +880,7 @@ const ALL_USERS = ['kishi','miyakawa','yamada','imura','goto','sato','tajima','h
 
 // キャッシュバージョン：変更するとすべてのユーザーのキャッシュが自動クリアされる
 (function() {
-  const CACHE_VER = '5';
+  const CACHE_VER = '6';
   if (localStorage.getItem('_cacheVer') !== CACHE_VER) {
     ALL_USERS.forEach(function(u) {
       localStorage.removeItem('att_' + u);
