@@ -2790,6 +2790,10 @@ function buildInitialRows(date) {
   if (log && log.length) {
     return [...log.map(name => srBlankRow(name, true)), srBlankRow()];
   }
+  const route = window.currentRoute || selectedFacilities || [];
+  if (route.length) {
+    return [...route.map(f => srBlankRow(f.n, true)), srBlankRow()];
+  }
   return [srBlankRow()];
 }
 
