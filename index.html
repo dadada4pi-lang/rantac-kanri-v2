@@ -930,7 +930,7 @@ function loadAllDataFromGAS() {
     fetch(GAS_URL + '?type=get_att&user=' + u)
       .then(function(r){ return r.json(); })
       .then(function(records){
-        if (!Array.isArray(records)) return;
+        if (!Array.isArray(records) || records.length === 0) return;
         localStorage.setItem('att_' + u, JSON.stringify(mergeAttRecords(records, u)));
         renderWorkSummary && renderWorkSummary();
         renderMyDataBody && renderMyDataBody();
@@ -938,7 +938,7 @@ function loadAllDataFromGAS() {
     fetch(GAS_URL + '?type=get_rep&user=' + u)
       .then(function(r){ return r.json(); })
       .then(function(records){
-        if (!Array.isArray(records)) return;
+        if (!Array.isArray(records) || records.length === 0) return;
         localStorage.setItem('rep_' + u, JSON.stringify(mergeRepRecords(records, u)));
         renderMyDataBody && renderMyDataBody();
       }).catch(function(){}).finally(tick);
@@ -953,14 +953,14 @@ function loadMyDataFromGAS() {
   fetch(GAS_URL + '?type=get_att&user=' + currentUser)
     .then(function(r){ return r.json(); })
     .then(function(records){
-      if (!Array.isArray(records)) return;
+      if (!Array.isArray(records) || records.length === 0) return;
       localStorage.setItem('att_' + currentUser, JSON.stringify(mergeAttRecords(records, currentUser)));
       renderMyData && renderMyData();
     }).catch(function(){}).finally(tick);
   fetch(GAS_URL + '?type=get_rep&user=' + currentUser)
     .then(function(r){ return r.json(); })
     .then(function(records){
-      if (!Array.isArray(records)) return;
+      if (!Array.isArray(records) || records.length === 0) return;
       localStorage.setItem('rep_' + currentUser, JSON.stringify(mergeRepRecords(records, currentUser)));
       renderMyData && renderMyData();
     }).catch(function(){}).finally(tick);
