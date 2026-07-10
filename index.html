@@ -543,7 +543,7 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
     <a href="javascript:logoClick()" style="display:inline-block"><img src="logo.png" class="topbar-logo" alt="RANTAC"></a>
   </div>
   <div class="card">
-    <div class="sec-label">今期の勤務時間</div>
+    <div class="sec-label">今月の勤務時間</div>
     <div id="workSummary" style="margin-bottom:16px"></div>
     <div class="sec-label" style="margin-bottom:8px">勤務記録</div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
@@ -3182,18 +3182,23 @@ function switchDelivTab(user) {
 }
 
 function renderWorkSummary() {
-  const period = getCurrentPeriod();
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const monthLabel = `${now.getFullYear()}年${now.getMonth()+1}月`;
   const users = ['kishi','miyakawa','yamada','imura','goto','sato','tajima','horiuchi'];
   const names = USER_NAMES;
-  let html = `<div style="font-size:11px;color:#888;margin-bottom:8px">${period.label}</div>`;
+  let html = `<div style="font-size:11px;color:#888;margin-bottom:8px">${monthLabel}</div>`;
   users.forEach(u => {
     const arr = JSON.parse(localStorage.getItem('att_' + u) || '[]');
-    const total = arr
-      .filter(r => r.date >= period.start && r.date <= period.end)
-      .reduce((sum, r) => sum + (calcWorkMin(r.clockIn, r.clockOut, r.breakMin) || 0), 0);
+    const monthRecs = arr.filter(r => r.date && r.date.startsWith(thisMonth));
+    const totalWork = monthRecs.reduce((sum, r) => sum + (calcWorkMin(r.clockIn, r.clockOut, r.breakMin) || 0), 0);
+    const showOt = SALES_USERS.includes(u);
+    const totalOt = showOt ? monthRecs.reduce((sum, r) => sum + Math.max(0, (calcWorkMin(r.clockIn, r.clockOut, r.breakMin)||0) - 450), 0) : 0;
+    const workStr = fmtMin(totalWork || null);
+    const otStr = showOt ? `<span style="font-size:12px;color:#888;margin-left:6px">残業 ${fmtMin(totalOt||null)}</span>` : '';
     html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0">
       <span style="font-weight:600">${names[u]}</span>
-      <span style="font-size:18px;font-weight:800;color:var(--blue)">${fmtMin(total || null)}</span>
+      <span style="display:flex;align-items:center"><span style="font-size:18px;font-weight:800;color:var(--blue)">${workStr}</span>${otStr}</span>
     </div>`;
   });
   document.getElementById('workSummary').innerHTML = html;
