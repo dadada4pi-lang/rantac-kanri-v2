@@ -782,6 +782,11 @@ const SCREENS = ['passwordScreen','homeScreen','methodScreen','textScreen','ocrS
   document.addEventListener('DOMContentLoaded', update);
 })();
 
+window.addEventListener('popstate', function(e) {
+  const screen = (e.state && e.state.screen) ? e.state.screen : 'homeScreen';
+  goTo(screen, true);
+});
+
 function logoClick(){
   if(localStorage.getItem('_auth_v2')==='1' && localStorage.getItem('currentUser')){
     goTo('homeScreen');
@@ -792,8 +797,12 @@ function logoClick(){
 
 function reloadCurrentScreen(){ goTo(_currentScreen); }
 
-function goTo(id){
+function goTo(id, _fromPop){
   _currentScreen = id;
+  if (!_fromPop) {
+    if (id === 'homeScreen') history.replaceState({screen: id}, '', location.pathname);
+    else history.pushState({screen: id}, '', location.pathname);
+  }
   SCREENS.forEach(s=>{
     const el=document.getElementById(s);
     if(s===id){el.className=s==='homeScreen'?'':el.className.replace(' active','')+' active';el.style.display=(s==='homeScreen'||s==='userSelectScreen'||s==='passwordScreen')?'flex':'block'}
