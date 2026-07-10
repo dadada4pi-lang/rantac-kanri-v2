@@ -2445,7 +2445,9 @@ function updateUserUI() {
   const migrateArea = document.getElementById('migrateBtnArea');
   if (migrateArea) migrateArea.style.display = (currentUser === 'yamada' && !localStorage.getItem('_gasMigrated')) ? '' : 'none';
   const myDataBtn = document.getElementById('myDataBtn');
-  if (myDataBtn) myDataBtn.innerHTML = (isManager ? '全員の出退勤・報告書を見る' : '自分の出退勤・報告書を見る') + '<span class="home-list-chevron">›</span>';
+  const noRep = currentUser === 'tajima' || currentUser === 'horiuchi';
+  const myDataLabel = isManager ? '全員の出退勤・報告書を見る' : noRep ? '自分の出退勤を見る' : '自分の出退勤・報告書を見る';
+  if (myDataBtn) myDataBtn.innerHTML = myDataLabel + '<span class="home-list-chevron">›</span>';
   updateHomeDate();
   renderTodayDelivery();
   const at = document.getElementById('attTitle');
@@ -3419,7 +3421,11 @@ function renderMyData() {
     tabsEl.style.display = 'none';
     _myDataUser = currentUser;
   }
-  document.getElementById('myDataTitle').textContent = (isYamada ? (USER_NAMES[_myDataUser]||'') + 'の' : '') + '出退勤・報告書';
+  const noRepUser = _myDataUser === 'tajima' || _myDataUser === 'horiuchi';
+  const repTab = document.getElementById('myDataTabRep');
+  if (repTab) repTab.style.display = noRepUser ? 'none' : '';
+  if (noRepUser && _myDataTab === 'rep') { _myDataTab = 'att'; switchMyDataTab('att'); }
+  document.getElementById('myDataTitle').textContent = (isYamada ? (USER_NAMES[_myDataUser]||'') + 'の' : '') + (noRepUser ? '出退勤' : '出退勤・報告書');
   renderMyDataBody();
 }
 
@@ -3431,7 +3437,11 @@ function switchMyDataUser(u) {
     b.style.background = isActive ? '#1a56db' : '#fff';
     b.style.color = isActive ? '#fff' : '#555';
   });
-  document.getElementById('myDataTitle').textContent = (USER_NAMES[u]||'') + 'の出退勤・報告書';
+  const noRepUser = u === 'tajima' || u === 'horiuchi';
+  const repTab = document.getElementById('myDataTabRep');
+  if (repTab) repTab.style.display = noRepUser ? 'none' : '';
+  if (noRepUser && _myDataTab === 'rep') { _myDataTab = 'att'; switchMyDataTab('att'); }
+  document.getElementById('myDataTitle').textContent = (USER_NAMES[u]||'') + 'の' + (noRepUser ? '出退勤' : '出退勤・報告書');
   renderMyDataBody();
 }
 
