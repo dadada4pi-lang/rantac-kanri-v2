@@ -2989,12 +2989,23 @@ function renderDelivLogScreen() {
       .then(r => r.json())
       .then(data => {
         if (!data || typeof data !== 'object') return;
+        const gasKeys = new Set();
         Object.entries(data).forEach(([date, names]) => {
           const k = `deliveryLog_${u}_${date}`;
-          if (Array.isArray(names) && names.length && !_deletedDelivKeys.has(k)) {
+          gasKeys.add(k);
+          if (Array.isArray(names) && names.length) {
             localStorage.setItem(k, JSON.stringify(names));
           }
         });
+        // GASにない日付はlocalStorageから削除
+        const toRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(`deliveryLog_${u}_`) && !gasKeys.has(key)) {
+            toRemove.push(key);
+          }
+        }
+        toRemove.forEach(k => localStorage.removeItem(k));
         if (u === _delivLogUser) renderDelivLogBody();
       }).catch(() => {});
   });
