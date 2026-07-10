@@ -2974,8 +2974,12 @@ function renderDelivLogBody() {
     const [y,m] = month.split('-');
     const rows = byMonth[month].map(e => {
       const d = new Date(e.date + 'T00:00:00');
+      const canDelete = currentUser === 'yamada' || currentUser === e.user || _delivLogUser === currentUser;
       return `<div style="padding:8px 0;border-bottom:1px solid #f3f3f3">
-        <div style="font-weight:700;font-size:13px;color:#333;margin-bottom:4px">${e.date.slice(5).replace('-','/')}（${DAYS[d.getDay()]}）<span style="font-weight:400;color:#888;font-size:12px;margin-left:6px">${e.names.length}件</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <div style="font-weight:700;font-size:13px;color:#333">${e.date.slice(5).replace('-','/')}（${DAYS[d.getDay()]}）<span style="font-weight:400;color:#888;font-size:12px;margin-left:6px">${e.names.length}件</span></div>
+          <button onclick="deleteDelivLog('${_delivLogUser}','${e.date}')" style="background:none;border:none;color:#ccc;font-size:16px;cursor:pointer;padding:0 2px;line-height:1" title="削除">✕</button>
+        </div>
         ${e.names.map((n,i)=>`<div style="font-size:12px;color:#555;padding:1px 0">${i+1}. ${n}</div>`).join('')}
       </div>`;
     }).join('');
@@ -3196,6 +3200,14 @@ function downloadCSV(type, user) {
   a.download = `${name}_${label}.csv`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function deleteDelivLog(user, date) {
+  if(isReadOnly()){ alert('会長は閲覧のみです'); return; }
+  if(!confirm(`${date} の配達記録を削除しますか？`)) return;
+  localStorage.removeItem(`deliveryLog_${user}_${date}`);
+  fetch(GAS_URL + '?type=delete_delivery&user=' + user + '&date=' + date).catch(()=>{});
+  renderDelivLogBody();
 }
 
 function clearData(user) {
