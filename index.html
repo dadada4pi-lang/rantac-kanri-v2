@@ -2452,7 +2452,7 @@ function updateUserUI() {
   const noReport = isManager || currentUser === 'tajima' || currentUser === 'horiuchi';
   if (reportBtn) reportBtn.style.display = noReport ? 'none' : '';
   const migrateArea = document.getElementById('migrateBtnArea');
-  if (migrateArea) migrateArea.style.display = (currentUser === 'yamada' && !localStorage.getItem('_gasMigrated')) ? '' : 'none';
+  if (migrateArea) migrateArea.style.display = 'none';
   const myDataBtn = document.getElementById('myDataBtn');
   const noRep = currentUser === 'tajima' || currentUser === 'horiuchi';
   const myDataLabel = isManager ? '全員の出退勤・報告書を見る' : noRep ? '自分の出退勤を見る' : '自分の出退勤・報告書を見る';
