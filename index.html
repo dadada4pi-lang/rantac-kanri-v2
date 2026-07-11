@@ -656,6 +656,7 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
     </div>
     <button class="btn-submit" onclick="submitClockOut()">退勤する</button>
     <div id="clockOutStatus" style="text-align:center;font-size:13px;margin-top:10px"></div>
+    <button id="continueInputBtn" onclick="resetForNextDay()" style="display:none;width:100%;margin-top:10px;padding:14px;background:#fff;color:var(--blue);border:2px solid var(--blue);border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">＋ 続けて別の日を入力する</button>
   </div>
   <div style="padding:0 12px 16px" id="missingDaysBox"></div>
 </div>
@@ -2938,9 +2939,10 @@ function submitClockOut() {
   status.textContent = '送信中...';
   status.style.color = '#888';
   const params = new URLSearchParams(record);
+  const contBtn = document.getElementById('continueInputBtn');
   fetch(GAS_URL + '?' + params.toString() + '&type=att&user=' + currentUser, { mode: 'no-cors' })
-    .then(() => { status.textContent = '✅ 退勤を記録しました'; status.style.color = '#43a047'; })
-    .catch(() => { status.textContent = '✅ 保存しました（オフライン）'; status.style.color = '#43a047'; });
+    .then(() => { status.textContent = '✅ 退勤を記録しました'; status.style.color = '#43a047'; if(contBtn) contBtn.style.display='block'; })
+    .catch(() => { status.textContent = '✅ 保存しました（オフライン）'; status.style.color = '#43a047'; if(contBtn) contBtn.style.display='block'; });
 }
 
 function renderTodayDelivery(){
@@ -2953,6 +2955,21 @@ function renderTodayDelivery(){
   box.style.display='block';
   box.innerHTML=`<div style="background:#f0f4ff;border-radius:10px;padding:12px 14px"><div style="color:#1a73e8;font-size:12px;font-weight:700;margin-bottom:6px">📦 本日の配達先</div>`+
     log.map((n,i)=>`<div style="color:#333;font-size:13px;padding:2px 0">${i+1}. ${n}</div>`).join('')+`</div>`;
+}
+
+function resetForNextDay() {
+  // 出勤パネルに戻してフォームをリセット
+  const btn = document.getElementById('continueInputBtn');
+  if (btn) btn.style.display = 'none';
+  document.getElementById('clockOutStatus').textContent = '';
+  document.getElementById('clockOutPanel').style.display = 'none';
+  document.getElementById('clockInPanel').style.display = 'block';
+  // 日付を今日にリセット（入力しやすいように）
+  const dateEl = document.getElementById('attDate');
+  if (dateEl) dateEl.value = '';
+  const ciEl = document.getElementById('attClockIn');
+  if (ciEl) ciEl.value = '';
+  renderMissingDays();
 }
 
 function submitKyukyu() {
