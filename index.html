@@ -3740,9 +3740,32 @@ function renderMyAttHTML(user) {
   const isSales = ['yamada','goto','imura'].includes(user);
   const isPart = ['horiuchi','kishi','miyakawa'].includes(user);
   const showSalary = isPart ? getSalaryVisible(user) : false;
+
+  // 年別給与合計（パートのみ）
+  let annualSummaryHTML = '';
+  if (isPart && showSalary) {
+    const byYear = {};
+    arr.forEach(r => {
+      const y = (r.date || '').slice(0, 4);
+      if (!y) return;
+      if (!byYear[y]) byYear[y] = 0;
+      const mins = (r.clockIn === '有給' || r.clockIn === '半休') ? parseWorkHours(r.workHours) : (calcWorkMin(r.clockIn, r.clockOut, r.breakMin) || 0);
+      byYear[y] += Math.round((mins || 0) * 20);
+    });
+    const years = Object.keys(byYear).sort().reverse();
+    if (years.length) {
+      annualSummaryHTML = `<div style="background:#e8f5e9;border-radius:12px;padding:12px 14px;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:700;color:#2e7d32;margin-bottom:8px">年間給与合計（1/1〜12/31）</div>
+        ${years.map(y => `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:14px">
+          <span style="color:#555;font-weight:600">${y}年</span>
+          <span style="font-weight:800;color:#1a7f4b">${byYear[y].toLocaleString('ja-JP')}円</span>
+        </div>`).join('')}
+      </div>`;
+    }
+  }
   function calcSalaryYen(mins) { return Math.round((mins||0) * 20); }
   function fmtYen(yen) { return yen.toLocaleString('ja-JP') + '円'; }
-  return Object.keys(months).sort().reverse().map(month => {
+  return annualSummaryHTML + Object.keys(months).sort().reverse().map(month => {
     const records = months[month];
     const [y,m] = month.split('-');
     const prevM = parseInt(m) === 1 ? 12 : parseInt(m) - 1;
