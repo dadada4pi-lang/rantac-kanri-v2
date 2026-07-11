@@ -3615,12 +3615,14 @@ function renderWorkSummary() {
     const showOt = SALES_USERS.includes(u);
     const totalOt = showOt ? monthRecs.reduce((sum, r) => sum + Math.max(0, getMins(r) - 450), 0) : 0;
     const hwMin = monthRecs.filter(r => r.holidayWork).reduce((sum, r) => sum + getMins(r), 0);
+    const totalNight = monthRecs.reduce((sum, r) => sum + ((r.clockIn==='有給'||r.clockIn==='半休') ? 0 : (calcNightMins(r.clockIn,r.clockOut)||0)), 0);
     const workStr = fmtMin(totalWork || null);
     const otStr = showOt ? `<span style="font-size:12px;color:#888;margin-left:6px">残業 ${fmtMin(totalOt||null)}</span>` : '';
+    const nightStr = totalNight > 0 ? `<span style="font-size:12px;color:#5c35a0;margin-left:6px">深夜 ${fmtMin(totalNight)}</span>` : '';
     const hwStr = hwMin > 0 ? `<span style="font-size:12px;color:#e53935;margin-left:6px">休日 ${fmtMin(hwMin)}</span>` : '';
     html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0">
       <span style="font-weight:600">${names[u]}</span>
-      <span style="display:flex;align-items:center"><span style="font-size:18px;font-weight:800;color:var(--blue)">${workStr}</span>${otStr}${hwStr}</span>
+      <span style="display:flex;align-items:center"><span style="font-size:18px;font-weight:800;color:var(--blue)">${workStr}</span>${otStr}${nightStr}${hwStr}</span>
     </div>`;
   });
   document.getElementById('workSummary').innerHTML = html;
