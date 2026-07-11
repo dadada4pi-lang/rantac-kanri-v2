@@ -3566,15 +3566,17 @@ function renderWorkDetail(user) {
   });
   return Object.keys(months).sort().reverse().map(month => {
     const records = months[month];
-    const totalMin = records.reduce((sum, r) => sum + (calcWorkMin(r.clockIn, r.clockOut, r.breakMin) || 0), 0);
+    function getMinsFull(r) { return (r.clockIn==='有給'||r.clockIn==='半休') ? parseWorkHours(r.workHours) : (calcWorkMin(r.clockIn,r.clockOut,r.breakMin)||0); }
+    const totalMin = records.reduce((sum, r) => sum + getMinsFull(r), 0);
     const [y, m] = month.split('-');
     const rows = records.map(r => {
-      const mins = calcWorkMin(r.clockIn, r.clockOut, r.breakMin);
+      const isPL = r.clockIn==='有給'||r.clockIn==='半休'||r.clockIn==='公休';
+      const mins = getMinsFull(r);
       const hwTag = r.holidayWork ? `<span style="font-size:10px;background:#e53935;color:#fff;border-radius:4px;padding:1px 4px;margin-left:3px">休日</span>` : '';
       return `<tr style="border-bottom:1px solid #f5f5f5">
         <td style="padding:5px 4px">${r.date ? r.date.slice(5).replace('-','/') : '-'}${hwTag}</td>
         <td style="text-align:center;padding:5px 4px">${r.clockIn||'-'}</td>
-        <td style="text-align:center;padding:5px 4px">${r.clockOut||'-'}</td>
+        <td style="text-align:center;padding:5px 4px">${isPL ? '' : (r.clockOut||'-')}</td>
         <td style="text-align:right;padding:5px 4px;font-weight:600;color:var(--blue)">${fmtMin(mins)}</td>
       </tr>`;
     }).join('');
