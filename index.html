@@ -3449,9 +3449,19 @@ function deleteAttRecord(user, date) {
   if(isReadOnly()){ alert('会長は閲覧のみです'); return; }
   if (!confirm(`${date} の出退勤を削除しますか？`)) return;
   const arr = JSON.parse(localStorage.getItem('att_' + user) || '[]');
+  const target = arr.find(r => r.date === date);
   const newArr = arr.filter(r => r.date !== date);
   localStorage.setItem('att_' + user, JSON.stringify(newArr));
   fetch(GAS_URL + '?type=delete_att&user=' + user + '&date=' + date).catch(()=>{});
+  // 有給レコードなら残数を戻す
+  if (target && (target.clockIn === '有給' || target.clockIn === '半休')) {
+    const amount = target.clockIn === '半休' ? 0.5 : 1;
+    const newBal = (getPaidLeaveRemaining(user) || 0) + amount;
+    paidLeaveBalance[user] = newBal;
+    localStorage.setItem('paidLeave_' + user, newBal);
+    fetch(GAS_URL + '?type=set_paid_leave&user=' + user + '&days=' + newBal, { mode: 'no-cors' });
+    if (user === currentUser) updatePaidLeaveBtnLabel();
+  }
   renderMyDataBody();
 }
 
