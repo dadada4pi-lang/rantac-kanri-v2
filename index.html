@@ -219,10 +219,19 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
 <div id="paidLeaveModal">
   <div class="paid-modal-box">
     <h3>有給の種別を選んでください</h3>
-    <button class="paid-modal-btn" style="background:#f57c00;color:#fff" onclick="execPaidLeave('全日')">全日有給</button>
-    <button class="paid-modal-btn" style="background:#fb8c00;color:#fff" onclick="execPaidLeave('午前半休')">午前半休</button>
-    <button class="paid-modal-btn" style="background:#ffa726;color:#fff" onclick="execPaidLeave('午後半休')">午後半休</button>
+    <div id="paidLeaveBalance" style="background:#fff8e1;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:14px;font-weight:600;text-align:center;color:#e65100"></div>
+    <button class="paid-modal-btn" style="background:#f57c00;color:#fff" onclick="confirmPaidLeave('全日')">全日有給</button>
+    <button class="paid-modal-btn" style="background:#fb8c00;color:#fff" onclick="confirmPaidLeave('午前半休')">午前半休</button>
+    <button class="paid-modal-btn" style="background:#ffa726;color:#fff" onclick="confirmPaidLeave('午後半休')">午後半休</button>
     <button class="paid-modal-btn" style="background:#eee;color:#666" onclick="document.getElementById('paidLeaveModal').classList.remove('open')">キャンセル</button>
+  </div>
+</div>
+<div id="paidLeaveConfirmModal" style="display:none;position:fixed;inset:0;background:rgba(20,25,35,.45);z-index:1000;align-items:center;justify-content:center">
+  <div class="paid-modal-box">
+    <h3 style="margin-bottom:8px">確認</h3>
+    <div id="paidLeaveConfirmText" style="font-size:14px;color:#555;margin-bottom:16px;text-align:center;line-height:1.6"></div>
+    <button class="paid-modal-btn" style="background:#f57c00;color:#fff" onclick="execPaidLeaveConfirmed()">使用する</button>
+    <button class="paid-modal-btn" style="background:#eee;color:#666" onclick="document.getElementById('paidLeaveConfirmModal').style.display='none';document.getElementById('paidLeaveModal').classList.add('open')">戻る</button>
   </div>
 </div>
 
@@ -552,6 +561,10 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
       <button id="delivTabMiyakawa" class="btn-secondary" style="flex:1" onclick="switchDelivTab('miyakawa')">宮川さん</button>
     </div>
     <div id="delivDetail" style="margin-bottom:16px"></div>
+    <div id="paidLeaveSection" style="border-top:1px solid #f0f0f0;padding-top:14px;margin-top:4px;display:none">
+      <div class="sec-label" style="margin-bottom:8px">有給管理</div>
+      <div id="paidLeaveList"></div>
+    </div>
     <div id="dataDeleteSection" style="border-top:1px solid #f0f0f0;padding-top:14px;margin-top:4px">
       <div class="sec-label">データ削除</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
@@ -807,6 +820,7 @@ function goTo(id, _fromPop){
     const delSec = document.getElementById('dataDeleteSection');
     if(delSec) delSec.style.display = isReadOnly() ? 'none' : '';
     renderWorkSummary();
+    renderPaidLeaveSection();
     loadAllDataFromGAS();
   }
   if(id==='myDataScreen'){ renderMyData(); if(currentUser==='yamada'||currentUser==='kamiya') loadAllDataFromGAS(); else loadMyDataFromGAS(); }
@@ -2423,6 +2437,7 @@ function _doSelectUser(user) {
   localStorage.setItem('currentUser', user);
   updateUserUI();
   loadCompanyCal();
+  loadPaidLeaveBalance();
   goTo('homeScreen');
 }
 
@@ -2516,16 +2531,69 @@ function submitClockIn() {
   setTimeout(() => showClockOutPanel(date, clockIn), 800);
 }
 
+let _paidLeavePendingType = null;
+let paidLeaveBalance = {};
+
+function loadPaidLeaveBalance() {
+  fetch(GAS_URL + '?type=get_all_paid_leave')
+    .then(r => r.json())
+    .then(data => {
+      paidLeaveBalance = data || {};
+      Object.keys(paidLeaveBalance).forEach(u => {
+        localStorage.setItem('paidLeave_' + u, paidLeaveBalance[u]);
+      });
+    })
+    .catch(() => {
+      ALL_USERS.forEach(u => {
+        const v = localStorage.getItem('paidLeave_' + u);
+        if (v !== null) paidLeaveBalance[u] = parseFloat(v);
+      });
+    });
+}
+
+function getPaidLeaveRemaining(user) {
+  const v = paidLeaveBalance[user];
+  if (v === undefined || v === null) {
+    const lv = localStorage.getItem('paidLeave_' + user);
+    return lv !== null ? parseFloat(lv) : null;
+  }
+  return parseFloat(v);
+}
+
 function submitPaidLeave() {
   if (!currentUser) { alert('担当者を選択してください'); return; }
   const date = document.getElementById('attDate').value;
   if (!date) { alert('日付を入力してください'); return; }
-  if (PART_USERS.includes(currentUser)) { execPaidLeave('全日'); return; }
+  const remaining = getPaidLeaveRemaining(currentUser);
+  if (remaining !== null && remaining <= 0) {
+    alert('有給残数が0です。使用できません。');
+    return;
+  }
+  const balanceEl = document.getElementById('paidLeaveBalance');
+  balanceEl.textContent = remaining !== null ? `有給残数：${remaining}日` : '有給残数：取得中...';
+  if (PART_USERS.includes(currentUser)) { confirmPaidLeave('全日'); return; }
   document.getElementById('paidLeaveModal').classList.add('open');
 }
 
-function execPaidLeave(type) {
+function confirmPaidLeave(type) {
   document.getElementById('paidLeaveModal').classList.remove('open');
+  _paidLeavePendingType = type;
+  const remaining = getPaidLeaveRemaining(currentUser);
+  const amount = type === '全日' ? 1 : 0.5;
+  const after = remaining !== null ? remaining - amount : null;
+  const label = type === '全日' ? '全日有給' : type;
+  const date = document.getElementById('attDate').value;
+  document.getElementById('paidLeaveConfirmText').innerHTML =
+    `<strong>${date}</strong>に<strong>${label}</strong>を使用します。<br><br>` +
+    (remaining !== null ? `有給残数：<strong>${remaining}日</strong> → <strong style="color:#e53935">${after}日</strong>` : '');
+  document.getElementById('paidLeaveConfirmModal').style.display = 'flex';
+}
+
+function execPaidLeaveConfirmed() {
+  document.getElementById('paidLeaveConfirmModal').style.display = 'none';
+  const type = _paidLeavePendingType;
+  _paidLeavePendingType = null;
+  const amount = type === '全日' ? 1 : 0.5;
   const date = document.getElementById('attDate').value;
   const prescribed = getPrescribedMins();
   const mins = type === '全日' ? prescribed : Math.floor(prescribed / 2);
@@ -2536,13 +2604,53 @@ function execPaidLeave(type) {
   const arr = JSON.parse(localStorage.getItem(key) || '[]');
   arr.push(record);
   localStorage.setItem(key, JSON.stringify(arr));
+  // 残数を減らす
+  const newVal = Math.max(0, (getPaidLeaveRemaining(currentUser) || 0) - amount);
+  paidLeaveBalance[currentUser] = newVal;
+  localStorage.setItem('paidLeave_' + currentUser, newVal);
   const status = document.getElementById('clockInStatus');
   status.textContent = '送信中...';
   status.style.color = '#888';
   const params = new URLSearchParams(record);
-  fetch(GAS_URL + '?' + params.toString() + '&type=att&user=' + currentUser, { mode: 'no-cors' })
-    .then(() => { status.textContent = `✅ ${label}を記録しました`; status.style.color = '#f57c00'; })
+  fetch(GAS_URL + '?' + params.toString() + '&type=att&user=' + currentUser, { mode: 'no-cors' });
+  fetch(GAS_URL + '?type=use_paid_leave&user=' + currentUser + '&amount=' + amount, { mode: 'no-cors' })
+    .then(() => { status.textContent = `✅ ${label}を記録しました（残数 ${newVal}日）`; status.style.color = '#f57c00'; })
     .catch(() => { status.textContent = '✅ 保存しました（オフライン）'; status.style.color = '#43a047'; });
+}
+
+function renderPaidLeaveSection() {
+  const isYamada = currentUser === 'yamada' || currentUser === 'kamiya';
+  const sec = document.getElementById('paidLeaveSection');
+  if (!sec) return;
+  sec.style.display = isYamada ? '' : 'none';
+  if (!isYamada) return;
+  const users = ALL_USERS;
+  const names = USER_NAMES;
+  sec.querySelector('#paidLeaveList').innerHTML = users.map(u => {
+    const rem = getPaidLeaveRemaining(u);
+    const dispRem = rem !== null ? rem + '日' : '-';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0">
+      <span style="font-weight:600;font-size:14px">${names[u]}</span>
+      <span style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:13px;color:#555">残数：<strong style="color:${rem===0?'#e53935':'#1a56db'}">${dispRem}</strong></span>
+        <button onclick="grantPaidLeavePrompt('${u}')" style="padding:4px 10px;border:1.5px solid var(--blue);border-radius:8px;background:#fff;color:var(--blue);font-size:12px;font-weight:600;cursor:pointer">付与</button>
+      </span>
+    </div>`;
+  }).join('');
+}
+
+function grantPaidLeavePrompt(user) {
+  const name = USER_NAMES[user] || user;
+  const current = getPaidLeaveRemaining(user);
+  const input = prompt(`${name}の有給日数を設定してください。\n現在の残数：${current !== null ? current + '日' : '未設定'}`);
+  if (input === null) return;
+  const days = parseFloat(input);
+  if (isNaN(days) || days < 0) { alert('正しい日数を入力してください'); return; }
+  paidLeaveBalance[user] = days;
+  localStorage.setItem('paidLeave_' + user, days);
+  fetch(GAS_URL + '?type=set_paid_leave&user=' + user + '&days=' + days, { mode: 'no-cors' });
+  renderPaidLeaveSection();
+  alert(`${name}の有給残数を${days}日に設定しました。`);
 }
 
 function submitClockOut() {
