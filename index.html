@@ -938,9 +938,9 @@ function printAttReport() {
           <td>${r.breakMin ? r.breakMin+'分' : ''}</td>
           <td>${r.workHours||''}</td>
           <td>${otStr}</td>
+          <td>${nightStr}</td>
           <td>${r.directOut||''}</td>
           <td>${r.directIn||''}</td>
-          <td>${nightStr}</td>
           <td>${note}</td>
         </tr>`;
       }
@@ -954,10 +954,10 @@ function printAttReport() {
     const nightTotalStr = totalNightMins > 0 ? `${Math.floor(totalNightMins/60)}時間${totalNightMins%60}分` : '';
     const thead = isSimple
       ? `<tr><th>日付</th><th>曜</th><th>出勤</th><th>退勤</th><th>休憩</th><th>勤務時間</th><th>深夜時間</th><th>備考</th></tr>`
-      : `<tr><th>日付</th><th>曜</th><th>出勤</th><th>退勤</th><th>休憩</th><th>勤務時間</th><th>残業</th><th>直行先</th><th>直帰先</th><th>深夜時間</th><th>備考</th></tr>`;
+      : `<tr><th>日付</th><th>曜</th><th>出勤</th><th>退勤</th><th>休憩</th><th>勤務時間</th><th>残業</th><th>深夜時間</th><th>直行先</th><th>直帰先</th><th>備考</th></tr>`;
     const totalRow = isSimple
       ? `<tr><td colspan="5" style="text-align:right;font-weight:700">合計</td><td style="font-weight:700">${totalH}時間${totalM}分</td><td style="font-weight:700;color:#5c35a0">${nightTotalStr}</td><td></td></tr>`
-      : `<tr><td colspan="5" style="text-align:right;font-weight:700">合計</td><td style="font-weight:700">${totalH}時間${totalM}分</td><td style="font-weight:700;color:#c62828">${totalOtMins>0?totalOtH+'時間'+totalOtM+'分':''}</td><td colspan="2"></td><td style="font-weight:700;color:#5c35a0">${nightTotalStr}</td><td></td></tr>`;
+      : `<tr><td colspan="5" style="text-align:right;font-weight:700">合計</td><td style="font-weight:700">${totalH}時間${totalM}分</td><td style="font-weight:700;color:#c62828">${totalOtMins>0?totalOtH+'時間'+totalOtM+'分':''}</td><td style="font-weight:700;color:#5c35a0">${nightTotalStr}</td><td colspan="3"></td></tr>`;
     const hwRow = hwMins > 0
       ? (isSimple
         ? `<tr style="background:#ffe0e0"><td colspan="5" style="text-align:right;font-weight:700">休日出勤合計</td><td style="font-weight:700">${hwH}時間${hwM}分</td><td colspan="2"></td></tr>`
