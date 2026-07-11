@@ -880,7 +880,6 @@ function printAttReport() {
   const period = periods.find(p => p.key === key);
   if (!period) return;
 
-  const allData = window._allData || [];
   const startStr = `${period.prevYear}-${String(period.prevMonth).padStart(2,'0')}-21`;
   const endStr = `${period.year}-${String(period.month).padStart(2,'0')}-20`;
 
@@ -892,7 +891,9 @@ function printAttReport() {
 
   function buildUserTable(user) {
     const name = USER_NAME_MAP[user] || user;
-    const records = allData.filter(r => r.user === user && inPeriod(r.date || '')).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    const stored = localStorage.getItem('att_' + user);
+    const allUserRecs = stored ? JSON.parse(stored) : [];
+    const records = allUserRecs.filter(r => inPeriod(r.date || '')).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
     let totalMins = 0;
     let rows = '';
     records.forEach(r => {
