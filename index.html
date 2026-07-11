@@ -609,7 +609,7 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
     </div>
     <div style="display:flex;gap:10px;margin-top:10px">
       <button class="btn-submit" style="background:#43a047;flex:2" onclick="submitClockIn()">出勤する</button>
-      <button class="btn-submit" style="background:#f57c00;flex:1" onclick="submitPaidLeave()">有給</button>
+      <button id="paidLeaveBtn" class="btn-submit" style="background:#f57c00;flex:1" onclick="submitPaidLeave()">有給</button>
       <button id="kyukuBtnRow" class="btn-submit" style="display:none;background:#78909c;flex:1" onclick="submitKyukyu()">公休</button>
     </div>
     <div id="clockInStatus" style="text-align:center;font-size:13px;margin-top:10px"></div>
@@ -2534,6 +2534,13 @@ function submitClockIn() {
 let _paidLeavePendingType = null;
 let paidLeaveBalance = {};
 
+function updatePaidLeaveBtnLabel() {
+  const btn = document.getElementById('paidLeaveBtn');
+  if (!btn) return;
+  const rem = getPaidLeaveRemaining(currentUser);
+  btn.innerHTML = rem !== null && rem !== undefined ? `有給<br><span style="font-size:11px;font-weight:400">(残${rem}日)</span>` : '有給';
+}
+
 function loadPaidLeaveBalance() {
   fetch(GAS_URL + '?type=get_all_paid_leave')
     .then(r => r.json())
@@ -2542,12 +2549,14 @@ function loadPaidLeaveBalance() {
       Object.keys(paidLeaveBalance).forEach(u => {
         localStorage.setItem('paidLeave_' + u, paidLeaveBalance[u]);
       });
+      updatePaidLeaveBtnLabel();
     })
     .catch(() => {
       ALL_USERS.forEach(u => {
         const v = localStorage.getItem('paidLeave_' + u);
         if (v !== null) paidLeaveBalance[u] = parseFloat(v);
       });
+      updatePaidLeaveBtnLabel();
     });
 }
 
@@ -2608,6 +2617,7 @@ function execPaidLeaveConfirmed() {
   const newVal = Math.max(0, (getPaidLeaveRemaining(currentUser) || 0) - amount);
   paidLeaveBalance[currentUser] = newVal;
   localStorage.setItem('paidLeave_' + currentUser, newVal);
+  updatePaidLeaveBtnLabel();
   const status = document.getElementById('clockInStatus');
   status.textContent = '送信中...';
   status.style.color = '#888';
