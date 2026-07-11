@@ -3051,6 +3051,12 @@ function roundUpTo15(timeStr) {
   return String(newH).padStart(2,'0') + ':' + String(newM).padStart(2,'0');
 }
 
+function parseWorkHours(str) {
+  if (!str) return 0;
+  const h = str.match(/(\d+)時間/);
+  const m = str.match(/(\d+)分/);
+  return (h ? parseInt(h[1]) * 60 : 0) + (m ? parseInt(m[1]) : 0);
+}
 function calcWorkMin(clockIn, clockOut, breakMin) {
   if (!clockIn || !clockOut) return null;
   const [ih, im] = clockIn.split(':').map(Number);
@@ -3649,7 +3655,8 @@ function renderMyAttHTML(user) {
     const prevY = parseInt(m) === 1 ? parseInt(y) - 1 : parseInt(y);
     const periodLabel = `${prevY}/${prevM}/21〜${parseInt(y)}/${parseInt(m)}/20`;
     const rows = records.map(r => {
-      const mins = calcWorkMin(r.clockIn, r.clockOut, r.breakMin);
+      const isPaidLeave = r.clockIn === '有給' || r.clockIn === '半休';
+      const mins = isPaidLeave ? parseWorkHours(r.workHours) : calcWorkMin(r.clockIn, r.clockOut, r.breakMin);
       const otMin = isSales ? Math.max(0, (mins||0) - 450) : null;
       const hw = r.holidayWork ? '<span style="font-size:10px;background:#e53935;color:#fff;border-radius:3px;padding:1px 4px;margin-left:3px">休日</span>' : '';
       const dOut = r.directOut ? '<span style="font-size:10px;background:#fb8c00;color:#fff;border-radius:3px;padding:1px 4px;margin-left:3px">直帰</span>' : '';
@@ -3662,10 +3669,11 @@ function renderMyAttHTML(user) {
         <button onclick="deleteAttRecord('${user}','${r.date}')" style="background:none;border:none;color:#ccc;font-size:16px;cursor:pointer;padding:0 2px;line-height:1" title="削除">✕</button>
       </div>`;
     }).join('');
+    function getRecMins(r) { return (r.clockIn === '有給' || r.clockIn === '半休') ? parseWorkHours(r.workHours) : (calcWorkMin(r.clockIn, r.clockOut, r.breakMin)||0); }
     const totalMin = isSales
-      ? records.reduce((s,r) => s + Math.max(0, (calcWorkMin(r.clockIn, r.clockOut, r.breakMin)||0) - 450), 0)
-      : records.reduce((s,r) => s + (calcWorkMin(r.clockIn, r.clockOut, r.breakMin)||0), 0);
-    const totalSalary = isPart ? calcSalaryYen(records.reduce((s,r) => s + (calcWorkMin(r.clockIn, r.clockOut, r.breakMin)||0), 0)) : 0;
+      ? records.reduce((s,r) => s + Math.max(0, getRecMins(r) - 450), 0)
+      : records.reduce((s,r) => s + getRecMins(r), 0);
+    const totalSalary = isPart ? calcSalaryYen(records.reduce((s,r) => s + getRecMins(r), 0)) : 0;
     const totalLabel = isPart ? '給与合計' : isSales ? '残業合計' : '合計';
     const totalVal = isPart ? fmtYen(totalSalary) : isSales ? fmtMinOt(totalMin) : fmtMin(totalMin);
     const totalColor = isPart ? '#1a7f4b' : '#1a56db';
