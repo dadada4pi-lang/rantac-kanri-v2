@@ -2539,7 +2539,18 @@ function updatePaidLeaveBtnLabel() {
   const btn = document.getElementById('paidLeaveBtn');
   if (!btn) return;
   const rem = getPaidLeaveRemaining(currentUser);
-  btn.innerHTML = rem !== null && rem !== undefined ? `有給<br><span style="font-size:11px;font-weight:400">(残${rem}日)</span>` : '有給';
+  if (rem !== null && rem !== undefined) {
+    btn.innerHTML = `有給<br><span style="font-size:11px;font-weight:400">(残${rem}日)</span>`;
+  } else {
+    btn.innerHTML = '有給';
+    // GASフェッチ完了前の場合、1秒後にリトライ
+    setTimeout(() => {
+      const rem2 = getPaidLeaveRemaining(currentUser);
+      if (rem2 !== null && rem2 !== undefined && btn.isConnected) {
+        btn.innerHTML = `有給<br><span style="font-size:11px;font-weight:400">(残${rem2}日)</span>`;
+      }
+    }, 1500);
+  }
 }
 
 function loadPaidLeaveBalance() {
