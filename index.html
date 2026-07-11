@@ -2639,28 +2639,36 @@ function renderPaidLeaveSection() {
   sec.querySelector('#paidLeaveList').innerHTML = users.map(u => {
     const rem = getPaidLeaveRemaining(u);
     const dispRem = rem !== null ? rem + '日' : '-';
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0">
-      <span style="font-weight:600;font-size:14px">${names[u]}</span>
-      <span style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:13px;color:#555">残数：<strong style="color:${rem===0?'#e53935':'#1a56db'}">${dispRem}</strong></span>
-        <button onclick="grantPaidLeavePrompt('${u}')" style="padding:4px 10px;border:1.5px solid var(--blue);border-radius:8px;background:#fff;color:var(--blue);font-size:12px;font-weight:600;cursor:pointer">付与</button>
-      </span>
+    return `<div style="padding:8px 0;border-bottom:1px solid #f0f0f0">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-weight:600;font-size:14px">${names[u]}</span>
+        <span style="font-size:13px;color:#555">残数：<strong id="plRem_${u}" style="color:${rem===0?'#e53935':'#1a56db'}">${dispRem}</strong></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button onclick="adjustPaidLeave('${u}',-1)" style="width:36px;height:36px;border:1.5px solid #e53935;border-radius:8px;background:#fff;color:#e53935;font-size:18px;font-weight:700;cursor:pointer;line-height:1">−</button>
+        <input id="plInput_${u}" type="number" value="1" min="0.5" step="0.5" style="width:60px;height:36px;border:1.5px solid #ddd;border-radius:8px;text-align:center;font-size:14px;font-weight:600">
+        <button onclick="adjustPaidLeave('${u}',1)" style="width:36px;height:36px;border:1.5px solid var(--blue);border-radius:8px;background:#fff;color:var(--blue);font-size:18px;font-weight:700;cursor:pointer;line-height:1">＋</button>
+        <span style="font-size:11px;color:#999">日</span>
+      </div>
     </div>`;
   }).join('');
 }
 
-function grantPaidLeavePrompt(user) {
+function adjustPaidLeave(user, sign) {
+  const inputEl = document.getElementById('plInput_' + user);
+  const delta = parseFloat(inputEl ? inputEl.value : 1);
+  if (isNaN(delta) || delta <= 0) { alert('正しい日数を入力してください'); return; }
+  const current = getPaidLeaveRemaining(user) || 0;
+  const newVal = Math.max(0, current + sign * delta);
   const name = USER_NAMES[user] || user;
-  const current = getPaidLeaveRemaining(user);
-  const input = prompt(`${name}の有給日数を設定してください。\n現在の残数：${current !== null ? current + '日' : '未設定'}`);
-  if (input === null) return;
-  const days = parseFloat(input);
-  if (isNaN(days) || days < 0) { alert('正しい日数を入力してください'); return; }
-  paidLeaveBalance[user] = days;
-  localStorage.setItem('paidLeave_' + user, days);
-  fetch(GAS_URL + '?type=set_paid_leave&user=' + user + '&days=' + days, { mode: 'no-cors' });
-  renderPaidLeaveSection();
-  alert(`${name}の有給残数を${days}日に設定しました。`);
+  const label = sign > 0 ? `+${delta}日付与` : `-${delta}日取消`;
+  if (!confirm(`${name}\n${current}日 → ${newVal}日\n（${label}）`)) return;
+  paidLeaveBalance[user] = newVal;
+  localStorage.setItem('paidLeave_' + user, newVal);
+  fetch(GAS_URL + '?type=set_paid_leave&user=' + user + '&days=' + newVal, { mode: 'no-cors' });
+  const remEl = document.getElementById('plRem_' + user);
+  if (remEl) { remEl.textContent = newVal + '日'; remEl.style.color = newVal === 0 ? '#e53935' : '#1a56db'; }
+  if (user === currentUser) updatePaidLeaveBtnLabel();
 }
 
 function submitClockOut() {
