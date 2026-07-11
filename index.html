@@ -825,6 +825,7 @@ function goTo(id, _fromPop){
   }
   if(id==='myDataScreen'){ renderMyData(); if(currentUser==='yamada'||currentUser==='kamiya') loadAllDataFromGAS(); else loadMyDataFromGAS(); }
   if(id==='delivLogScreen'){ renderDelivLogScreen(); }
+  if(id==='attendanceScreen'){ updatePaidLeaveBtnLabel(); }
 }
 
 // ===== GAS URL (must be defined before loadFacilitiesFromGAS IIFE) =====
