@@ -900,7 +900,7 @@ function printAttReport() {
     const stored = localStorage.getItem('att_' + user);
     const allUserRecs = stored ? JSON.parse(stored) : [];
     const records = allUserRecs.filter(r => inPeriod(r.date || '')).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-    let totalMins = 0, totalOtMins = 0, hwMins = 0;
+    let totalMins = 0, totalOtMins = 0, hwMins = 0, totalNightMins = 0;
     let rows = '';
     records.forEach(r => {
       const d = new Date(r.date + 'T00:00:00');
@@ -911,6 +911,9 @@ function printAttReport() {
       totalMins += mins || 0;
       const isHW = !!(r.holidayWork);
       if (isHW) hwMins += mins || 0;
+      const nightMins = isPL || isKyu ? 0 : (calcNightMins(r.clockIn, r.clockOut) || 0);
+      totalNightMins += nightMins;
+      const nightStr = nightMins > 0 ? `${Math.floor(nightMins/60)}時間${nightMins%60}分` : '';
       const rowStyle = isHW ? ' style="background:#ffe0e0"' : '';
       const hwMark = isHW ? '<span style="font-size:9px;background:#e53935;color:#fff;border-radius:2px;padding:1px 3px;margin-left:2px">休日</span>' : '';
       const note = r.note || '';
@@ -921,7 +924,8 @@ function printAttReport() {
           <td>${isPL||isKyu ? '' : (r.clockOut||'')}</td>
           <td>${r.breakMin ? r.breakMin+'分' : ''}</td>
           <td>${r.workHours||''}</td>
-          <td colspan="2">${note}</td>
+          <td>${nightStr}</td>
+          <td>${note}</td>
         </tr>`;
       } else {
         const otMins = Math.max(0, (mins||0) - 450);
@@ -936,27 +940,28 @@ function printAttReport() {
           <td>${otStr}</td>
           <td>${r.directOut||''}</td>
           <td>${r.directIn||''}</td>
+          <td>${nightStr}</td>
           <td>${note}</td>
         </tr>`;
       }
     });
-    // Simple: 8列 / Non-simple: 10列
-    const colSpan = isSimple ? 8 : 10;
+    // Simple: 8列 / Non-simple: 11列
+    const colSpan = isSimple ? 8 : 11;
     if (!rows) rows = `<tr><td colspan="${colSpan}" style="color:#aaa;text-align:center">記録なし</td></tr>`;
     const totalH = Math.floor(totalMins/60), totalM = totalMins % 60;
     const totalOtH = Math.floor(totalOtMins/60), totalOtM = totalOtMins % 60;
     const hwH = Math.floor(hwMins/60), hwM = hwMins % 60;
+    const nightTotalStr = totalNightMins > 0 ? `${Math.floor(totalNightMins/60)}時間${totalNightMins%60}分` : '';
     const thead = isSimple
-      ? `<tr><th>日付</th><th>曜</th><th>出勤</th><th>退勤</th><th>休憩</th><th>勤務時間</th><th colspan="2">備考</th></tr>`
-      : `<tr><th>日付</th><th>曜</th><th>出勤</th><th>退勤</th><th>休憩</th><th>勤務時間</th><th>残業</th><th>直行先</th><th>直帰先</th><th>備考</th></tr>`;
-    // 合計行: col1-5=ラベル, col6=勤務時間合計, col7=残業合計(non-simpleのみ), 残り=空
+      ? `<tr><th>日付</th><th>曜</th><th>出勤</th><th>退勤</th><th>休憩</th><th>勤務時間</th><th>深夜時間</th><th>備考</th></tr>`
+      : `<tr><th>日付</th><th>曜</th><th>出勤</th><th>退勤</th><th>休憩</th><th>勤務時間</th><th>残業</th><th>直行先</th><th>直帰先</th><th>深夜時間</th><th>備考</th></tr>`;
     const totalRow = isSimple
-      ? `<tr><td colspan="5" style="text-align:right;font-weight:700">合計</td><td style="font-weight:700">${totalH}時間${totalM}分</td><td colspan="2"></td></tr>`
-      : `<tr><td colspan="5" style="text-align:right;font-weight:700">合計</td><td style="font-weight:700">${totalH}時間${totalM}分</td><td style="font-weight:700;color:#c62828">${totalOtMins>0?totalOtH+'時間'+totalOtM+'分':''}</td><td colspan="3"></td></tr>`;
+      ? `<tr><td colspan="5" style="text-align:right;font-weight:700">合計</td><td style="font-weight:700">${totalH}時間${totalM}分</td><td style="font-weight:700;color:#5c35a0">${nightTotalStr}</td><td></td></tr>`
+      : `<tr><td colspan="5" style="text-align:right;font-weight:700">合計</td><td style="font-weight:700">${totalH}時間${totalM}分</td><td style="font-weight:700;color:#c62828">${totalOtMins>0?totalOtH+'時間'+totalOtM+'分':''}</td><td colspan="2"></td><td style="font-weight:700;color:#5c35a0">${nightTotalStr}</td><td></td></tr>`;
     const hwRow = hwMins > 0
       ? (isSimple
         ? `<tr style="background:#ffe0e0"><td colspan="5" style="text-align:right;font-weight:700">休日出勤合計</td><td style="font-weight:700">${hwH}時間${hwM}分</td><td colspan="2"></td></tr>`
-        : `<tr style="background:#ffe0e0"><td colspan="5" style="text-align:right;font-weight:700">休日出勤合計</td><td style="font-weight:700">${hwH}時間${hwM}分</td><td colspan="4"></td></tr>`)
+        : `<tr style="background:#ffe0e0"><td colspan="5" style="text-align:right;font-weight:700">休日出勤合計</td><td style="font-weight:700">${hwH}時間${hwM}分</td><td colspan="5"></td></tr>`)
       : '';
     return `
       <div class="user-section">
