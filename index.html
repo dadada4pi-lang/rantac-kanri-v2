@@ -564,6 +564,10 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
     <div id="paidLeaveSection" style="border-top:1px solid #f0f0f0;padding-top:14px;margin-top:4px;display:none">
       <div class="sec-label" style="margin-bottom:8px">有給管理</div>
       <div id="paidLeaveList"></div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid #f0f0f0">
+        <div class="sec-label" style="margin-bottom:8px">給与表示設定（パート）</div>
+        <div id="salaryVisibilityList"></div>
+      </div>
     </div>
     <div id="dataDeleteSection" style="border-top:1px solid #f0f0f0;padding-top:14px;margin-top:4px">
       <div class="sec-label">データ削除</div>
@@ -2648,6 +2652,22 @@ function renderPaidLeaveSection() {
   if (!isYamada) return;
   const users = ALL_USERS;
   const names = USER_NAMES;
+  const PART_USERS_LIST = ['horiuchi', 'kishi', 'miyakawa'];
+  const svList = document.getElementById('salaryVisibilityList');
+  if (svList) {
+    svList.innerHTML = PART_USERS_LIST.map(u => {
+      const show = getSalaryVisible(u);
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0">
+        <span style="font-weight:600;font-size:14px">${names[u]}</span>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <span style="font-size:13px;color:#555">${show ? '表示中' : '非表示'}</span>
+          <div onclick="toggleSalaryVisible('${u}')" id="svToggle_${u}" style="width:44px;height:24px;border-radius:12px;background:${show ? '#43a047' : '#ccc'};position:relative;cursor:pointer;transition:background .2s">
+            <div style="width:20px;height:20px;border-radius:50%;background:#fff;position:absolute;top:2px;left:${show ? '22px' : '2px'};transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>
+          </div>
+        </label>
+      </div>`;
+    }).join('');
+  }
   sec.querySelector('#paidLeaveList').innerHTML = users.map(u => {
     const rem = getPaidLeaveRemaining(u);
     const dispRem = rem !== null ? rem + '日' : '-';
@@ -2664,6 +2684,19 @@ function renderPaidLeaveSection() {
       </div>
     </div>`;
   }).join('');
+}
+
+function getSalaryVisible(user) {
+  const v = localStorage.getItem('salaryVisible_' + user);
+  return v === null ? true : v === '1';
+}
+
+function toggleSalaryVisible(user) {
+  const newVal = !getSalaryVisible(user);
+  localStorage.setItem('salaryVisible_' + user, newVal ? '1' : '0');
+  renderPaidLeaveSection();
+  // myDataScreenが開いていれば再描画
+  if (_currentScreen === 'myDataScreen') renderMyData();
 }
 
 function adjustPaidLeave(user, sign) {
@@ -3686,6 +3719,7 @@ function renderMyAttHTML(user) {
 
   const isSales = ['yamada','goto','imura'].includes(user);
   const isPart = ['horiuchi','kishi','miyakawa'].includes(user);
+  const showSalary = isPart ? getSalaryVisible(user) : false;
   function calcSalaryYen(mins) { return Math.round((mins||0) * 20); }
   function fmtYen(yen) { return yen.toLocaleString('ja-JP') + '円'; }
   return Object.keys(months).sort().reverse().map(month => {
@@ -3700,8 +3734,8 @@ function renderMyAttHTML(user) {
       const otMin = isSales ? Math.max(0, (mins||0) - 450) : null;
       const hw = r.holidayWork ? '<span style="font-size:10px;background:#e53935;color:#fff;border-radius:3px;padding:1px 4px;margin-left:3px">休日</span>' : '';
       const dOut = r.directOut ? '<span style="font-size:10px;background:#fb8c00;color:#fff;border-radius:3px;padding:1px 4px;margin-left:3px">直帰</span>' : '';
-      const rightVal = isPart ? fmtYen(calcSalaryYen(mins)) : isSales ? fmtMinOt(otMin) : fmtMin(mins);
-      const rightColor = isPart ? '#1a7f4b' : '#1a56db';
+      const rightVal = showSalary ? fmtYen(calcSalaryYen(mins)) : isSales ? fmtMinOt(otMin) : fmtMin(mins);
+      const rightColor = showSalary ? '#1a7f4b' : '#1a56db';
       return `<div style="display:flex;align-items:center;padding:9px 0;border-bottom:1px solid #f3f3f3;gap:6px;font-size:13px">
         <div style="min-width:50px;font-weight:600;color:#333">${(r.date||'').slice(5).replace('-','/')}</div>
         <div style="flex:1;color:#555">${r.clockIn||'-'} → ${r.clockOut||'-'}${hw}${dOut}</div>
@@ -3713,10 +3747,10 @@ function renderMyAttHTML(user) {
     const totalMin = isSales
       ? records.reduce((s,r) => s + Math.max(0, getRecMins(r) - 450), 0)
       : records.reduce((s,r) => s + getRecMins(r), 0);
-    const totalSalary = isPart ? calcSalaryYen(records.reduce((s,r) => s + getRecMins(r), 0)) : 0;
-    const totalLabel = isPart ? '給与合計' : isSales ? '残業合計' : '合計';
-    const totalVal = isPart ? fmtYen(totalSalary) : isSales ? fmtMinOt(totalMin) : fmtMin(totalMin);
-    const totalColor = isPart ? '#1a7f4b' : '#1a56db';
+    const totalSalary = showSalary ? calcSalaryYen(records.reduce((s,r) => s + getRecMins(r), 0)) : 0;
+    const totalLabel = showSalary ? '給与合計' : isSales ? '残業合計' : '合計';
+    const totalVal = showSalary ? fmtYen(totalSalary) : isSales ? fmtMinOt(totalMin) : fmtMin(totalMin);
+    const totalColor = showSalary ? '#1a7f4b' : '#1a56db';
     const hwRecs = records.filter(r => r.holidayWork);
     const hwMin = hwRecs.reduce((s,r) => s + (calcWorkMin(r.clockIn, r.clockOut, r.breakMin)||0), 0);
     const hwLine = hwMin > 0 ? `<div style="font-size:12px;color:#e53935;font-weight:600;text-align:right;margin-top:2px">休日出勤合計 ${fmtMin(hwMin)}</div>` : '';
