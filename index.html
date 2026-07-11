@@ -2443,6 +2443,7 @@ function _doSelectUser(user) {
   updateUserUI();
   loadCompanyCal();
   loadPaidLeaveBalance();
+  loadAppSettings();
   goTo('homeScreen');
 }
 
@@ -2686,16 +2687,35 @@ function renderPaidLeaveSection() {
   }).join('');
 }
 
+let appSettings = {};
+
+function loadAppSettings() {
+  fetch(GAS_URL + '?type=get_settings')
+    .then(r => r.json())
+    .then(data => {
+      appSettings = data || {};
+      Object.keys(appSettings).forEach(k => localStorage.setItem('appSetting_' + k, appSettings[k]));
+    })
+    .catch(() => {
+      // オフライン時はlocalStorageから復元
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('appSetting_'));
+      keys.forEach(k => { appSettings[k.replace('appSetting_', '')] = localStorage.getItem(k); });
+    });
+}
+
 function getSalaryVisible(user) {
-  const v = localStorage.getItem('salaryVisible_' + user);
-  return v === null ? true : v === '1';
+  const key = 'salaryVisible_' + user;
+  const v = appSettings[key] !== undefined ? appSettings[key] : localStorage.getItem('appSetting_' + key);
+  return v === null || v === undefined ? true : v === '1';
 }
 
 function toggleSalaryVisible(user) {
   const newVal = !getSalaryVisible(user);
-  localStorage.setItem('salaryVisible_' + user, newVal ? '1' : '0');
+  const key = 'salaryVisible_' + user;
+  appSettings[key] = newVal ? '1' : '0';
+  localStorage.setItem('appSetting_' + key, newVal ? '1' : '0');
+  fetch(GAS_URL + '?type=set_setting&key=' + key + '&val=' + (newVal ? '1' : '0'), { mode: 'no-cors' });
   renderPaidLeaveSection();
-  // myDataScreenが開いていれば再描画
   if (_currentScreen === 'myDataScreen') renderMyData();
 }
 
