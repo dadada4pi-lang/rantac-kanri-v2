@@ -569,6 +569,13 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
         <div id="salaryVisibilityList"></div>
       </div>
     </div>
+    <div style="border-top:1px solid #f0f0f0;padding-top:14px;margin-top:4px">
+      <div class="sec-label" style="margin-bottom:8px">出勤簿印刷</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="printPeriodSel" style="flex:1;min-width:160px;padding:8px;border:1.5px solid #ddd;border-radius:8px;font-size:14px"></select>
+        <button onclick="printAttReport()" style="padding:10px 18px;background:#1a56db;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨 印刷・PDF</button>
+      </div>
+    </div>
     <div id="dataDeleteSection" style="border-top:1px solid #f0f0f0;padding-top:14px;margin-top:4px">
       <div class="sec-label">データ削除</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
@@ -825,11 +832,136 @@ function goTo(id, _fromPop){
     if(delSec) delSec.style.display = isReadOnly() ? 'none' : '';
     renderWorkSummary();
     renderPaidLeaveSection();
+    populatePrintPeriodSel();
     loadAllDataFromGAS();
   }
   if(id==='myDataScreen'){ renderMyData(); if(currentUser==='yamada'||currentUser==='kamiya') loadAllDataFromGAS(); else loadMyDataFromGAS(); }
   if(id==='delivLogScreen'){ renderDelivLogScreen(); }
   if(id==='attendanceScreen'){ updatePaidLeaveBtnLabel(); }
+}
+
+// ===== 出勤簿印刷 =====
+const ALL_USERS_PRINT = ['kishi','miyakawa','yamada','imura','goto','sato','tajima','horiuchi'];
+const USER_NAME_MAP = {kishi:'岸',miyakawa:'宮川',yamada:'山田',imura:'井村',goto:'後藤',sato:'佐藤',tajima:'田島',horiuchi:'堀内'};
+
+function getPrintPeriods() {
+  const periods = [];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const year = d.getFullYear();
+    const month = d.getMonth() + 1;
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear = month === 1 ? year - 1 : year;
+    const label = `${year}年${month}月分（${prevYear}/${String(prevMonth).padStart(2,'0')}/21〜${year}/${String(month).padStart(2,'0')}/20）`;
+    const key = `${year}-${String(month).padStart(2,'0')}`;
+    periods.push({key, label, year, month, prevYear, prevMonth});
+  }
+  return periods;
+}
+
+function populatePrintPeriodSel() {
+  const sel = document.getElementById('printPeriodSel');
+  if (!sel) return;
+  sel.innerHTML = '';
+  getPrintPeriods().forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.key;
+    opt.textContent = p.label;
+    sel.appendChild(opt);
+  });
+}
+
+function printAttReport() {
+  const sel = document.getElementById('printPeriodSel');
+  if (!sel) return;
+  const key = sel.value;
+  const periods = getPrintPeriods();
+  const period = periods.find(p => p.key === key);
+  if (!period) return;
+
+  const allData = window._allData || [];
+  const startStr = `${period.prevYear}-${String(period.prevMonth).padStart(2,'0')}-21`;
+  const endStr = `${period.year}-${String(period.month).padStart(2,'0')}-20`;
+
+  function inPeriod(dateStr) {
+    return dateStr >= startStr && dateStr <= endStr;
+  }
+
+  const dayOfWeekJP = ['日','月','火','水','木','金','土'];
+
+  function buildUserTable(user) {
+    const name = USER_NAME_MAP[user] || user;
+    const records = allData.filter(r => r.user === user && inPeriod(r.date || '')).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    let totalMins = 0;
+    let rows = '';
+    records.forEach(r => {
+      const d = new Date(r.date + 'T00:00:00');
+      const dow = isNaN(d) ? '' : dayOfWeekJP[d.getDay()];
+      const isPL = r.clockIn === '有給' || r.clockIn === '半休';
+      const mins = isPL ? parseWorkHours(r.workHours) : (calcWorkMin(r.clockIn, r.clockOut, r.breakMin) || 0);
+      totalMins += mins || 0;
+      const hm = mins ? `${Math.floor(mins/60)}:${String(mins%60).padStart(2,'0')}` : '';
+      rows += `<tr>
+        <td>${r.date || ''}</td>
+        <td>${dow}</td>
+        <td>${isPL ? r.clockIn : (r.clockIn || '')}</td>
+        <td>${isPL ? '' : (r.clockOut || '')}</td>
+        <td>${r.breakMin ? r.breakMin+'分' : ''}</td>
+        <td>${r.workHours || hm}</td>
+        <td>${r.facility || ''}</td>
+        <td>${r.note || ''}</td>
+      </tr>`;
+    });
+    if (!rows) rows = '<tr><td colspan="8" style="color:#aaa;text-align:center">記録なし</td></tr>';
+    const totalH = Math.floor(totalMins/60);
+    const totalM = totalMins % 60;
+    return `
+      <div class="user-section">
+        <h3>${name}（${user}）</h3>
+        <table>
+          <thead><tr><th>日付</th><th>曜</th><th>出勤</th><th>退勤</th><th>休憩</th><th>勤務時間</th><th>施設</th><th>備考</th></tr></thead>
+          <tbody>${rows}</tbody>
+          <tfoot><tr><td colspan="5" style="text-align:right;font-weight:700">合計</td><td style="font-weight:700">${totalH}時間${totalM}分</td><td colspan="2"></td></tr></tfoot>
+        </table>
+      </div>`;
+  }
+
+  const allTables = ALL_USERS_PRINT.map(buildUserTable).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>出勤簿 ${period.label}</title>
+<style>
+  body { font-family: 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif; font-size: 11px; color: #111; margin: 0; padding: 16px; }
+  h1 { font-size: 16px; text-align: center; margin-bottom: 4px; }
+  .period { text-align: center; font-size: 12px; color: #555; margin-bottom: 20px; }
+  .user-section { margin-bottom: 24px; page-break-inside: avoid; }
+  h3 { font-size: 13px; background: #1a3a6b; color: #fff; padding: 5px 10px; margin: 0 0 0 0; border-radius: 4px 4px 0 0; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #d6e4f7; font-size: 10px; padding: 4px 6px; border: 1px solid #aaa; text-align: center; }
+  td { padding: 3px 6px; border: 1px solid #ccc; text-align: center; }
+  tbody tr:nth-child(even) { background: #f5f8ff; }
+  tfoot td { background: #eef2fa; }
+  @media print {
+    body { padding: 0; }
+    .user-section { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<h1>出勤簿</h1>
+<div class="period">${period.label}</div>
+${allTables}
+<script>window.onload = function(){ window.print(); }<\/script>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank');
+  if (win) { win.document.write(html); win.document.close(); }
+  else { alert('ポップアップがブロックされています。ブラウザの設定でポップアップを許可してください。'); }
 }
 
 // ===== GAS URL (must be defined before loadFacilitiesFromGAS IIFE) =====
