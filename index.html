@@ -3602,14 +3602,20 @@ function switchDelivTab(user) {
 
 function renderWorkSummary() {
   const now = new Date();
-  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  const monthLabel = `${now.getFullYear()}年${now.getMonth()+1}月`;
+  // 20日締め期間キー（今日が21日以降なら翌月、それ以外は当月）
+  const d = now.getDate();
+  const periodM = d >= 21 ? (now.getMonth() + 2 > 12 ? 1 : now.getMonth() + 2) : now.getMonth() + 1;
+  const periodY = d >= 21 && now.getMonth() + 2 > 12 ? now.getFullYear() + 1 : now.getFullYear();
+  const periodKey = `${periodY}-${String(periodM).padStart(2,'0')}`;
+  const prevM = periodM === 1 ? 12 : periodM - 1;
+  const prevY = periodM === 1 ? periodY - 1 : periodY;
+  const monthLabel = `${prevY}/${prevM}/21〜${periodY}/${periodM}/20`;
   const users = ['kishi','miyakawa','yamada','imura','goto','sato','tajima','horiuchi'];
   const names = USER_NAMES;
   let html = `<div style="font-size:11px;color:#888;margin-bottom:8px">${monthLabel}</div>`;
   users.forEach(u => {
     const arr = JSON.parse(localStorage.getItem('att_' + u) || '[]');
-    const monthRecs = arr.filter(r => r.date && r.date.startsWith(thisMonth));
+    const monthRecs = arr.filter(r => r.date && getAttPeriodKey(r.date) === periodKey);
     function getMins(r){ return (r.clockIn==='有給'||r.clockIn==='半休') ? parseWorkHours(r.workHours) : (calcWorkMin(r.clockIn,r.clockOut,r.breakMin)||0); }
     const totalWork = monthRecs.reduce((sum, r) => sum + getMins(r), 0);
     const showOt = SALES_USERS.includes(u);
