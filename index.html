@@ -624,6 +624,7 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
       <button id="kyukuBtnRow" class="btn-submit" style="display:none;background:#78909c;flex:1" onclick="submitKyukyu()">公休</button>
     </div>
     <div id="clockInStatus" style="text-align:center;font-size:13px;margin-top:10px"></div>
+    <button id="continueClockInBtn" onclick="resetClockInForNextDay()" style="display:none;width:100%;margin-top:10px;padding:14px;background:#fff;color:var(--blue);border:2px solid var(--blue);border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">＋ 続けて別の日を入力する</button>
   </div>
   <!-- 退勤パネル -->
   <div class="card" id="clockOutPanel" style="display:none">
@@ -2683,6 +2684,8 @@ function openAttendance() {
 
   document.getElementById('attDate').value = today;
   document.getElementById('clockInStatus').textContent = '';
+  const contClockInBtn = document.getElementById('continueClockInBtn');
+  if (contClockInBtn) contClockInBtn.style.display = 'none';
   updateUserUI();
 
   if (saved && saved.date === today) {
@@ -2700,6 +2703,18 @@ function openAttendance() {
   }
   renderMissingDays();
   goTo('attendanceScreen');
+}
+
+function resetClockInForNextDay() {
+  const btn = document.getElementById('continueClockInBtn');
+  if (btn) btn.style.display = 'none';
+  document.getElementById('clockInStatus').textContent = '';
+  const dateEl = document.getElementById('attDate');
+  if (dateEl) dateEl.value = '';
+  const defaultClockIn = { kishi:'09:30', miyakawa:'09:00', horiuchi:'09:00', yamada:'09:00', imura:'09:00', goto:'09:00', sato:'09:00', tajima:'09:00' };
+  const ciEl = document.getElementById('attClockIn');
+  if (ciEl) ciEl.value = defaultClockIn[currentUser] || '09:00';
+  renderMissingDays();
 }
 
 function submitClockIn() {
@@ -2821,7 +2836,8 @@ function execPaidLeaveConfirmed() {
   fetch(GAS_URL + '?' + params.toString() + '&type=att&user=' + currentUser, { mode: 'no-cors' });
   fetch(GAS_URL + '?type=use_paid_leave&user=' + currentUser + '&amount=' + amount, { mode: 'no-cors' })
     .then(() => { status.textContent = `✅ ${label}を記録しました（残数 ${newVal}日）`; status.style.color = '#f57c00'; })
-    .catch(() => { status.textContent = '✅ 保存しました（オフライン）'; status.style.color = '#43a047'; });
+    .catch(() => { status.textContent = '✅ 保存しました（オフライン）'; status.style.color = '#43a047'; })
+    .finally(() => { const btn = document.getElementById('continueClockInBtn'); if (btn) btn.style.display = 'block'; });
 }
 
 function renderPaidLeaveSection() {
@@ -3000,7 +3016,8 @@ function submitKyukyu() {
   const params = new URLSearchParams(record);
   fetch(GAS_URL + '?' + params.toString() + '&type=att&user=' + currentUser, { mode: 'no-cors' })
     .then(() => { status.textContent = '✅ 公休を記録しました'; status.style.color = '#78909c'; renderMissingDays(); })
-    .catch(() => { status.textContent = '✅ 保存しました（オフライン）'; status.style.color = '#43a047'; renderMissingDays(); });
+    .catch(() => { status.textContent = '✅ 保存しました（オフライン）'; status.style.color = '#43a047'; renderMissingDays(); })
+    .finally(() => { const btn = document.getElementById('continueClockInBtn'); if (btn) btn.style.display = 'block'; });
 }
 
 function renderMissingDays(){
