@@ -4011,9 +4011,11 @@ function renderMyAttHTML(user) {
       const nightTag = nightMin > 0 ? `<span style="font-size:10px;background:#5c35a0;color:#fff;border-radius:3px;padding:1px 4px;margin-left:3px">深夜${fmtMin(nightMin)}</span>` : '';
       const rightVal = showSalary ? fmtYen(calcSalaryYen(mins)) : isSales ? fmtMinOt(otMin) : fmtMin(mins);
       const rightColor = showSalary ? '#1a7f4b' : '#1a56db';
+      const breakStr = (!isPaidLeave && r.clockIn !== '公休' && parseInt(r.breakMin) > 0) ? `<span style="font-size:11px;color:#aaa;margin-left:4px">休憩${r.breakMin}分</span>` : '';
+      const workStr = (!isPaidLeave && r.clockIn !== '公休' && mins > 0) ? `<span style="font-size:11px;color:#888;margin-left:4px">実働${fmtMin(mins)}</span>` : '';
       return `<div style="display:flex;align-items:center;padding:9px 0;border-bottom:1px solid #f3f3f3;gap:6px;font-size:13px">
         <div style="min-width:50px;font-weight:600;color:#333">${(r.date||'').slice(5).replace('-','/')}</div>
-        <div style="flex:1;color:#555">${isPaidLeave || r.clockIn==='公休' ? (r.clockIn + (mins ? `　${fmtMin(mins)}` : '')) : `${r.clockIn||'-'} → ${r.clockOut||'-'}`}${hw}${dOut}${nightTag}</div>
+        <div style="flex:1;color:#555">${isPaidLeave || r.clockIn==='公休' ? (r.clockIn + (mins ? `　${fmtMin(mins)}` : '')) : `${r.clockIn||'-'} → ${r.clockOut||'-'}`}${breakStr}${workStr}${hw}${dOut}${nightTag}</div>
         <div style="min-width:60px;text-align:right;font-weight:700;color:${rightColor}">${rightVal}</div>
         <button onclick="deleteAttRecord('${user}','${r.date}')" style="background:none;border:none;color:#ccc;font-size:16px;cursor:pointer;padding:0 2px;line-height:1" title="削除">✕</button>
       </div>`;
