@@ -3418,6 +3418,7 @@ function fmtMinOt(mins) {
 let _deliveryPlanWeekStart = null; // 'YYYY-MM-DD' (月曜)
 let _deliveryPlanData = {}; // { 'YYYY-MM-DD': { route1: '', route2: '' } } (GAS保存形式、改行区切り文字列)
 let _deliveryPlanSelections = {}; // { 'YYYY-MM-DD_route1': ['施設名', ...] }
+let _dpEditMode = {}; // { 'YYYY-MM-DD_route1': true/false }
 
 document.addEventListener('click', function(e) {
   document.querySelectorAll('[id^="dpSug_"]').forEach(el => {
@@ -3508,9 +3509,16 @@ function renderDeliveryPlan() {
 function renderDpRouteSlot(dateStr, route, personLabel, color) {
   const key = dateStr + '_' + route;
   const routeNo = route === 'route1' ? '1' : '2';
+  const editing = !!_dpEditMode[key];
   return `
     <div style="margin-bottom:12px">
-      <div style="font-size:12px;font-weight:600;color:${color};margin-bottom:4px">ルート${routeNo}（${personLabel}）</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:6px">
+        <div style="font-size:12px;font-weight:600;color:${color}">ルート${routeNo}（${personLabel}）</div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button onclick="dpToggleEdit('${key}')" id="dpEditBtn_${key}" style="font-size:11px;color:#555;background:#f0f0f0;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;white-space:nowrap">${editing ? '完了' : '編集'}</button>
+          <button onclick="dpBuildRouteFrom('${dateStr}','${route}')" style="font-size:11px;color:#fff;background:#1a56db;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;white-space:nowrap">🚚 ルート作成</button>
+        </div>
+      </div>
       <ul id="dpSelList_${key}" style="list-style:none;padding:0;margin:0 0 6px;display:flex;flex-wrap:wrap;gap:0">${dpRenderChips(key)}</ul>
       <div style="position:relative">
         <input type="text" id="dpSearch_${key}" placeholder="施設名・略称で検索" autocomplete="off"
@@ -3521,12 +3529,33 @@ function renderDpRouteSlot(dateStr, route, personLabel, color) {
     </div>`;
 }
 
+function dpToggleEdit(key) {
+  _dpEditMode[key] = !_dpEditMode[key];
+  const btn = document.getElementById('dpEditBtn_' + key);
+  if (btn) btn.textContent = _dpEditMode[key] ? '完了' : '編集';
+  const list = document.getElementById('dpSelList_' + key);
+  if (list) list.innerHTML = dpRenderChips(key);
+}
+
 function dpRenderChips(key) {
   const names = _deliveryPlanSelections[key] || [];
+  const editing = !!_dpEditMode[key];
   if (!names.length) return '<li style="color:#bbb;font-size:12px;padding:4px 0">未選択</li>';
   return names.map((n, i) => `<li style="display:inline-flex;align-items:center;gap:4px;background:#eef2ff;border-radius:14px;padding:4px 10px;margin:0 6px 6px 0;font-size:13px">
-    ${n}<button onclick="dpRemoveFacility('${key}',${i})" style="background:none;border:none;color:#888;font-size:14px;cursor:pointer;padding:0;line-height:1">×</button>
+    ${n}${editing ? `<button onclick="dpRemoveFacility('${key}',${i})" style="background:none;border:none;color:#888;font-size:14px;cursor:pointer;padding:0;line-height:1">×</button>` : ''}
   </li>`).join('');
+}
+
+function dpBuildRouteFrom(dateStr, route) {
+  const key = dateStr + '_' + route;
+  const names = _deliveryPlanSelections[key] || [];
+  if (!names.length) { alert('この日のこのルートには施設が選択されていません'); return; }
+  const facs = names.map(n => DB.find(f => f.n === n)).filter(Boolean);
+  if (!facs.length) { alert('施設データが見つかりませんでした'); return; }
+  const missing = names.length - facs.length;
+  selectedFacilities = facs;
+  if (missing > 0) alert(`${missing}件の施設が見つからずルートから除外されました`);
+  buildRoute();
 }
 
 function dpOnSearch(dateStr, route, val) {
