@@ -3470,6 +3470,7 @@ function renderMethodTodayPlan() {
 function openDeliveryPlan() {
   const today = new Date();
   _deliveryPlanWeekStart = fmtDateYMD(getMondayOf(today));
+  _dpShowPast = false;
   try { localStorage.setItem('_lastScreen', 'deliveryPlanScreen'); localStorage.setItem('dpWeekStart', _deliveryPlanWeekStart); } catch(e){}
   goTo('deliveryPlanScreen');
   loadDeliveryPlan();
@@ -3479,6 +3480,7 @@ function shiftDeliveryPlanWeek(delta) {
   const d = new Date(_deliveryPlanWeekStart + 'T00:00:00');
   d.setDate(d.getDate() + delta * 7);
   _deliveryPlanWeekStart = fmtDateYMD(d);
+  _dpShowPast = false;
   try { localStorage.setItem('dpWeekStart', _deliveryPlanWeekStart); } catch(e){}
   loadDeliveryPlan();
 }
@@ -3516,10 +3518,14 @@ function renderDeliveryPlan() {
   const label = `${start.getMonth()+1}/${start.getDate()} 〜 ${end.getMonth()+1}/${end.getDate()}`;
   document.getElementById('deliveryPlanWeekLabel').textContent = label;
 
+  const todayStr = fmtDateYMD(new Date());
+  const isCurrentWeek = todayStr >= _deliveryPlanWeekStart && todayStr <= fmtDateYMD(end);
   let html = '';
+  let hiddenCount = 0;
   for (let i = 0; i < 5; i++) {
     const d = new Date(start); d.setDate(start.getDate() + i);
     const dateStr = fmtDateYMD(d);
+    if (isCurrentWeek && !_dpShowPast && dateStr < todayStr) { hiddenCount++; continue; }
     const dow = dayOfWeekJP[i];
     const note = noteByDow[dow] || '';
     html += `
@@ -3533,7 +3539,18 @@ function renderDeliveryPlan() {
         </div>
       </div>`;
   }
-  document.getElementById('deliveryPlanBody').innerHTML = html;
+  const pastNote = hiddenCount > 0
+    ? `<div style="text-align:center;margin-bottom:10px"><button onclick="dpTogglePastDays()" style="background:none;border:none;color:#1a56db;font-size:12px;cursor:pointer;text-decoration:underline">終了した${hiddenCount}日を表示する</button></div>`
+    : (_dpShowPast && isCurrentWeek
+      ? `<div style="text-align:center;margin-bottom:10px"><button onclick="dpTogglePastDays()" style="background:none;border:none;color:#888;font-size:12px;cursor:pointer;text-decoration:underline">終了した日を隠す</button></div>`
+      : '');
+  document.getElementById('deliveryPlanBody').innerHTML = pastNote + html;
+}
+
+let _dpShowPast = false;
+function dpTogglePastDays() {
+  _dpShowPast = !_dpShowPast;
+  renderDeliveryPlan();
 }
 
 function renderDpRouteSlot(dateStr, route, personLabel, color) {
