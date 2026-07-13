@@ -836,6 +836,7 @@ function reloadCurrentScreen(){ goTo(_currentScreen); }
 
 function goTo(id, _fromPop){
   _currentScreen = id;
+  if (id !== 'deliveryPlanScreen') { try { localStorage.removeItem('_lastScreen'); } catch(e){} }
   if (!_fromPop) {
     if (id === 'homeScreen') history.replaceState({screen: id}, '', location.pathname);
     else history.pushState({screen: id}, '', location.pathname);
@@ -3435,6 +3436,7 @@ function fmtDateYMD(d) {
 function openDeliveryPlan() {
   const today = new Date();
   _deliveryPlanWeekStart = fmtDateYMD(getMondayOf(today));
+  try { localStorage.setItem('_lastScreen', 'deliveryPlanScreen'); localStorage.setItem('dpWeekStart', _deliveryPlanWeekStart); } catch(e){}
   goTo('deliveryPlanScreen');
   loadDeliveryPlan();
 }
@@ -3443,6 +3445,7 @@ function shiftDeliveryPlanWeek(delta) {
   const d = new Date(_deliveryPlanWeekStart + 'T00:00:00');
   d.setDate(d.getDate() + delta * 7);
   _deliveryPlanWeekStart = fmtDateYMD(d);
+  try { localStorage.setItem('dpWeekStart', _deliveryPlanWeekStart); } catch(e){}
   loadDeliveryPlan();
 }
 
@@ -4466,6 +4469,17 @@ updateUserUI();
         localStorage.removeItem('_savedRoute');
       }
     } catch(e) { localStorage.removeItem('_savedRoute'); }
+  }
+  // iOSがバックグラウンドでタブを破棄し再読み込みされた際、配達予定を開いていれば復元
+  const lastScreen = (() => { try { return localStorage.getItem('_lastScreen'); } catch(e){ return null; } })();
+  if (currentUser && lastScreen === 'deliveryPlanScreen') {
+    updateUserUI();
+    loadCompanyCal();
+    const savedWeek = (() => { try { return localStorage.getItem('dpWeekStart'); } catch(e){ return null; } })();
+    _deliveryPlanWeekStart = savedWeek || fmtDateYMD(getMondayOf(new Date()));
+    goTo('deliveryPlanScreen');
+    loadDeliveryPlan();
+    return;
   }
   if (currentUser) {
     updateUserUI();
