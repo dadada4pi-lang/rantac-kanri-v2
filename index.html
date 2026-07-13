@@ -756,7 +756,7 @@ input.att-input[type="time"]{min-width:0}
     取扱説明書
     <a href="javascript:logoClick()" style="display:inline-block"><img src="logo.png" class="topbar-logo" alt="RANTAC"></a>
   </div>
-  <iframe src="https://docs.google.com/viewer?url=https://dadada4pi-lang.github.io/rantac-kanri-v2/manual.pdf&embedded=true" style="width:100%;height:calc(100vh - 52px);border:none;display:block"></iframe>
+  <iframe id="manualPdfFrame" style="width:100%;height:calc(100vh - 52px);border:none;display:block"></iframe>
 </div>
 
 <!-- ===== DELIVERY LOG SCREEN ===== -->
@@ -853,6 +853,10 @@ function goTo(id, _fromPop){
   if(id==='listScreen'){ window._staffFilter=''; window._rankFilter=''; renderFacilityList(); }
   if(id==='textScreen'){ renderFavs(); }
   if(id==='calendarScreen'){ calEditMode = false; const btn=document.getElementById('calEditToggleBtn'); if(btn){btn.textContent='編集する';btn.style.background='#1a73e8';} renderCompanyCal(); loadCompanyCalAndRefresh(); }
+  if(id==='pdfScreen'){
+    const frame = document.getElementById('manualPdfFrame');
+    if (frame) frame.src = 'https://docs.google.com/viewer?url=https://dadada4pi-lang.github.io/rantac-kanri-v2/manual.pdf%3Fv%3D' + Date.now() + '&embedded=true';
+  }
   if(id==='dataScreen'){
     if(currentUser !== 'yamada' && currentUser !== 'kamiya' && currentUser !== 'kaicho'){ alert('データ出力は管理者のみ使用できます'); goTo('homeScreen'); return; }
     const delSec = document.getElementById('dataDeleteSection');
