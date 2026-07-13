@@ -3546,8 +3546,8 @@ function renderDeliveryPlan() {
     const dow = dayOfWeekJP[i];
     const note = noteByDow[dow] || '';
     html += `
-      <div style="margin-bottom:14px;border:1px solid #e8eaed;border-radius:10px;overflow:hidden">
-        <div style="background:#f5f7fa;padding:8px 12px;font-weight:700;font-size:14px">
+      <div style="margin-bottom:14px;border:1px solid #e8eaed;border-radius:10px">
+        <div style="background:#f5f7fa;padding:8px 12px;font-weight:700;font-size:14px;border-radius:10px 10px 0 0">
           ${d.getMonth()+1}/${d.getDate()}（${dow}）<span style="font-size:11px;color:#e65100;font-weight:500">${note}</span>
         </div>
         <div style="padding:10px 12px">
