@@ -427,11 +427,12 @@ input.att-input[type="time"]{min-width:0}
       <div class="method-desc">施設名・略称を<br>検索して追加</div>
     </div>
     <div class="method-card" onclick="openDeliveryPlan()">
-      <div class="method-icon">📅</div>
+      <div class="method-icon">🚚</div>
       <div class="method-title">配達予定</div>
       <div class="method-desc">週間の予定を<br>見る・編集する</div>
     </div>
   </div>
+  <div id="methodTodayPlan" style="margin:16px 12px 0"></div>
 </div>
 
 <!-- ===== TEXT INPUT ===== -->
@@ -848,6 +849,7 @@ function goTo(id, _fromPop){
   });
   window.scrollTo(0,0);
   if(id==='homeScreen'){ document.getElementById('homeScreen').style.display='flex'; renderTodayDelivery(); }
+  if(id==='methodScreen'){ renderMethodTodayPlan(); }
   if(id==='listScreen'){ window._staffFilter=''; window._rankFilter=''; renderFacilityList(); }
   if(id==='textScreen'){ renderFavs(); }
   if(id==='calendarScreen'){ calEditMode = false; const btn=document.getElementById('calEditToggleBtn'); if(btn){btn.textContent='編集する';btn.style.background='#1a73e8';} renderCompanyCal(); loadCompanyCalAndRefresh(); }
@@ -3431,6 +3433,38 @@ function getMondayOf(d) {
 
 function fmtDateYMD(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function renderMethodTodayPlan() {
+  const box = document.getElementById('methodTodayPlan');
+  if (!box) return;
+  const today = new Date();
+  const dayOfWeekJP = ['日','月','火','水','木','金','土'];
+  const dateLabel = `${today.getMonth()+1}/${today.getDate()}（${dayOfWeekJP[today.getDay()]}）`;
+  box.innerHTML = `<div style="background:#f5f7fa;border-radius:10px;padding:12px 14px">
+    <div style="font-weight:700;font-size:14px;margin-bottom:8px">📍 本日 ${dateLabel} の配達予定</div>
+    <div style="font-size:13px;color:#888">読み込み中...</div>
+  </div>`;
+  const todayStr = fmtDateYMD(today);
+  const weekStart = fmtDateYMD(getMondayOf(today));
+  fetch(GAS_URL + '?type=get_delivery_plan&weekStart=' + weekStart)
+    .then(r => r.json())
+    .then(data => {
+      const entry = (data && data[todayStr]) || { route1: '', route2: '' };
+      const r1 = (entry.route1 || '').split('\n').map(s => s.trim()).filter(Boolean);
+      const r2 = (entry.route2 || '').split('\n').map(s => s.trim()).filter(Boolean);
+      const fmtList = (names, color) => names.length
+        ? names.map(n => `<span style="display:inline-block;background:#eef2ff;color:${color};border-radius:12px;padding:3px 10px;margin:0 6px 6px 0;font-size:13px">${n}</span>`).join('')
+        : '<span style="color:#bbb;font-size:13px">未定</span>';
+      box.innerHTML = `<div style="background:#f5f7fa;border-radius:10px;padding:12px 14px">
+        <div style="font-weight:700;font-size:14px;margin-bottom:8px">📍 本日 ${dateLabel} の配達予定</div>
+        <div style="font-size:12px;font-weight:600;color:#1a56db;margin-bottom:4px">ルート1（岸さん）</div>
+        <div style="margin-bottom:8px">${fmtList(r1, '#1a56db')}</div>
+        <div style="font-size:12px;font-weight:600;color:#c62828;margin-bottom:4px">ルート2（宮川さん）</div>
+        <div>${fmtList(r2, '#c62828')}</div>
+      </div>`;
+    })
+    .catch(() => { box.innerHTML = ''; });
 }
 
 function openDeliveryPlan() {
