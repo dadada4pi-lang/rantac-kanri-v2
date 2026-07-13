@@ -3587,6 +3587,7 @@ function renderDpRouteSlot(dateStr, route, personLabel, color) {
       <div style="position:relative">
         <input type="text" id="dpSearch_${key}" placeholder="施設名・略称で検索" autocomplete="off"
           oninput="dpOnSearch('${dateStr}','${route}',this.value)"
+          onfocus="dpScrollIntoView(this)"
           style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit">
         <div id="dpSug_${key}" style="display:none;position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid #ddd;border-radius:8px;max-height:220px;overflow-y:auto;z-index:20;box-shadow:0 4px 12px rgba(0,0,0,.12)"></div>
       </div>
@@ -3626,6 +3627,10 @@ function buildRouteFromNames(names) {
   buildRoute();
 }
 
+function dpScrollIntoView(el) {
+  setTimeout(() => { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300);
+}
+
 function dpOnSearch(dateStr, route, val) {
   const key = dateStr + '_' + route;
   const sugEl = document.getElementById('dpSug_' + key);
@@ -3640,6 +3645,10 @@ function dpOnSearch(dateStr, route, val) {
     ${f.n}<div style="font-size:11px;color:#aaa">${f.a||''}</div>
   </div>`).join('');
   sugEl.style.display = 'block';
+  const vh = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+  const rect = sugEl.getBoundingClientRect();
+  const availableH = Math.max(120, vh - rect.top - 12);
+  sugEl.style.maxHeight = Math.min(220, availableH) + 'px';
 }
 
 function dpAddFacility(dateStr, route, name) {
