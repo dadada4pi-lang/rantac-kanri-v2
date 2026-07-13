@@ -794,8 +794,7 @@ input.att-input[type="time"]{min-width:0}
   </div>
   <div id="deliveryPlanBody" style="padding:12px;overflow-y:auto"></div>
   <div style="margin:0 12px 24px">
-    <button class="btn-submit" onclick="saveDeliveryPlan()">保存する</button>
-    <div id="deliveryPlanStatus" style="text-align:center;font-size:13px;margin-top:10px"></div>
+    <div id="deliveryPlanStatus" style="text-align:center;font-size:13px"></div>
   </div>
 </div>
 
@@ -3516,7 +3515,7 @@ function renderDpRouteSlot(dateStr, route, personLabel, color) {
         <div style="font-size:12px;font-weight:600;color:${color}">ルート${routeNo}（${personLabel}）</div>
         <div style="display:flex;gap:6px;flex-shrink:0">
           <button onclick="dpToggleEdit('${key}')" id="dpEditBtn_${key}" style="font-size:11px;color:#555;background:#f0f0f0;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;white-space:nowrap">${editing ? '完了' : '編集'}</button>
-          <button onclick="dpBuildRouteFrom('${dateStr}','${route}')" style="font-size:11px;color:#fff;background:#1a56db;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;white-space:nowrap">🚚 ルート作成</button>
+          <button onclick="dpBuildRouteFrom('${dateStr}','${route}')" style="font-size:11px;color:#fff;background:#1a56db;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;white-space:nowrap">ルート作成</button>
         </div>
       </div>
       <ul id="dpSelList_${key}" style="list-style:none;padding:0;margin:0 0 6px;display:flex;flex-wrap:wrap;gap:0">${dpRenderChips(key)}</ul>
@@ -3581,14 +3580,22 @@ function dpAddFacility(dateStr, route, name) {
   document.getElementById('dpSearch_' + key).value = '';
   document.getElementById('dpSug_' + key).style.display = 'none';
   document.getElementById('dpSelList_' + key).innerHTML = dpRenderChips(key);
+  saveDeliveryPlan();
 }
 
 function dpRemoveFacility(key, idx) {
   _deliveryPlanSelections[key].splice(idx, 1);
   document.getElementById('dpSelList_' + key).innerHTML = dpRenderChips(key);
+  saveDeliveryPlan();
 }
 
+let _dpSaveTimer = null;
 function saveDeliveryPlan() {
+  clearTimeout(_dpSaveTimer);
+  _dpSaveTimer = setTimeout(_dpSaveDeliveryPlanNow, 400);
+}
+
+function _dpSaveDeliveryPlanNow() {
   const status = document.getElementById('deliveryPlanStatus');
   const start = new Date(_deliveryPlanWeekStart + 'T00:00:00');
   const plan = {};
