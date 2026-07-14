@@ -2628,22 +2628,18 @@ function getBreakForHalfDay(halfDay) {
   return getDefaultBreak();
 }
 
-const USER_PASSWORDS = {
-  imura: '4444',
-  sato: '10321032',
-  goto: 'ran!20user',
-  yamada: '1201',
-  horiuchi: '0910'
-}; // 未設定のユーザー（kishi/miyakawa/tajima等）はパスワードなしのまま
+// パスワードそのものはここに置かない（GAS側で照合）。ここは「誰が保護対象か」だけを持つ。
+const PASSWORD_PROTECTED_USERS = ['imura', 'sato', 'goto', 'yamada', 'horiuchi'];
 
 let _pwPendingUser = null;
 
 function selectUser(user) {
-  if (USER_PASSWORDS[user]) {
+  if (PASSWORD_PROTECTED_USERS.includes(user)) {
     _pwPendingUser = user;
     document.getElementById('pwModalTitle').textContent = USER_NAMES[user] + 'のパスワードを入力してください';
     document.getElementById('pwModalInput').value = '';
     document.getElementById('pwModalError').style.display = 'none';
+    document.getElementById('pwModalError').textContent = 'パスワードが違います';
     const modal = document.getElementById('pwModal');
     modal.style.display = 'flex';
     setTimeout(() => document.getElementById('pwModalInput').focus(), 100);
@@ -2654,14 +2650,28 @@ function selectUser(user) {
 
 function pwModalSubmit() {
   const input = document.getElementById('pwModalInput').value;
-  if (input !== USER_PASSWORDS[_pwPendingUser]) {
-    document.getElementById('pwModalError').style.display = 'block';
-    document.getElementById('pwModalInput').value = '';
-    return;
-  }
-  document.getElementById('pwModal').style.display = 'none';
-  _doSelectUser(_pwPendingUser);
-  _pwPendingUser = null;
+  const user = _pwPendingUser;
+  const btn = document.querySelector('#pwModal button[onclick="pwModalSubmit()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '確認中...'; }
+  fetch(GAS_URL + '?type=check_password&user=' + user + '&pw=' + encodeURIComponent(input))
+    .then(r => r.json())
+    .then(res => {
+      if (btn) { btn.disabled = false; btn.textContent = 'ログイン'; }
+      if (!res.ok) {
+        document.getElementById('pwModalError').textContent = 'パスワードが違います';
+        document.getElementById('pwModalError').style.display = 'block';
+        document.getElementById('pwModalInput').value = '';
+        return;
+      }
+      document.getElementById('pwModal').style.display = 'none';
+      _doSelectUser(user);
+      _pwPendingUser = null;
+    })
+    .catch(() => {
+      if (btn) { btn.disabled = false; btn.textContent = 'ログイン'; }
+      document.getElementById('pwModalError').textContent = '通信エラーが発生しました。もう一度お試しください';
+      document.getElementById('pwModalError').style.display = 'block';
+    });
 }
 
 function pwModalCancel() {
