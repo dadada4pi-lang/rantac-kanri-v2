@@ -2765,6 +2765,23 @@ function openAttendance() {
   }
   renderMissingDays();
   goTo('attendanceScreen');
+  syncMyAttFromGAS();
+}
+
+function syncMyAttFromGAS() {
+  if (!currentUser) return;
+  const key = 'att_' + currentUser;
+  fetch(GAS_URL + '?type=get_att&user=' + currentUser)
+    .then(r => r.json())
+    .then(records => {
+      if (!Array.isArray(records)) return;
+      const local = JSON.parse(localStorage.getItem(key) || '[]');
+      const gasDates = new Set(records.map(r => r.date));
+      const localOnly = local.filter(r => !gasDates.has(r.date));
+      localStorage.setItem(key, JSON.stringify(mergeAttRecords(records, currentUser).concat(localOnly)));
+      renderMissingDays();
+    })
+    .catch(() => {});
 }
 
 function resetClockInForNextDay() {
