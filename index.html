@@ -1635,8 +1635,8 @@ function distKm(a,b){
 }
 function toMin(dl){if(dl==='free')return Infinity;if(!dl)return 720;const[h,m]=dl.split(':').map(Number);return h*60+m}
 function todayClosed(f){return(f.cd||[]).includes(new Date().getDay())}
-function dlBadgeClass(dl){return dl==='free'?'b-free':dl==='13:00'?'b-1300':'b-1200'}
-function dlBadgeText(dl){return dl==='free'?'時間自由':dl||'12:00'}
+function dlBadgeClass(dl){return (!dl||dl==='free')?'b-free':dl==='13:00'?'b-1300':'b-1200'}
+function dlBadgeText(dl){return (!dl||dl==='free')?'時間自由':dl}
 
 // ===== 検索 =====
 let selectedFacilities=[];
