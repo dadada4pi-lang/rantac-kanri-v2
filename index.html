@@ -2628,7 +2628,13 @@ function getBreakForHalfDay(halfDay) {
   return getDefaultBreak();
 }
 
-const USER_PASSWORDS = {}; // テスト中はパスワードなし（運用開始時に設定）
+const USER_PASSWORDS = {
+  imura: '4444',
+  sato: '10321032',
+  goto: 'ran!20user',
+  yamada: '1201',
+  horiuchi: '0910'
+}; // 未設定のユーザー（kishi/miyakawa/tajima等）はパスワードなしのまま
 
 let _pwPendingUser = null;
 
