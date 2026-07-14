@@ -3508,6 +3508,8 @@ function fmtAnnounceDate(dateStr) {
   return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 
+const ANNOUNCE_HOME_MAX = 3;
+
 function loadAnnounceHomeBox() {
   const box = document.getElementById('announceHomeBox');
   if (!box) return;
@@ -3515,14 +3517,18 @@ function loadAnnounceHomeBox() {
     .then(r => r.json())
     .then(list => {
       if (!Array.isArray(list) || !list.length) { box.innerHTML = ''; return; }
-      const latest = list[0];
-      box.innerHTML = `<div onclick="goTo('announceScreen')" style="background:#fff8e1;border:1px solid #ffe0a3;border-radius:10px;padding:10px 12px;cursor:pointer;display:flex;align-items:center;gap:8px">
-        <span style="font-size:16px">📢</span>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:11px;color:#b26a00;font-weight:600">${fmtAnnounceDate(latest.ts)}・${USER_NAMES[latest.user]||latest.user}</div>
-          <div style="font-size:13px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${latest.message}</div>
-        </div>
-        <span style="color:#bbb;font-size:14px">›</span>
+      const shown = list.slice(0, ANNOUNCE_HOME_MAX);
+      const items = shown.map(a => `<div onclick="goTo('announceScreen')" style="padding:8px 0;cursor:pointer;border-bottom:1px solid #f2e2b3">
+        <div style="font-size:11px;color:#b26a00;font-weight:600">${fmtAnnounceDate(a.ts)}・${USER_NAMES[a.user]||a.user}</div>
+        <div style="font-size:13px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.message}</div>
+      </div>`).join('');
+      const more = list.length > ANNOUNCE_HOME_MAX
+        ? `<div onclick="goTo('announceScreen')" style="text-align:center;padding-top:6px;font-size:12px;color:#b26a00;cursor:pointer">他${list.length - ANNOUNCE_HOME_MAX}件を見る ›</div>`
+        : '';
+      box.innerHTML = `<div style="background:#fff8e1;border:1px solid #ffe0a3;border-radius:10px;padding:10px 12px 2px">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px"><span style="font-size:16px">📢</span><span style="font-size:12px;font-weight:700;color:#b26a00">お知らせ</span></div>
+        ${items}
+        ${more}
       </div>`;
     })
     .catch(() => { box.innerHTML = ''; });
@@ -3535,12 +3541,22 @@ function renderAnnounceScreen() {
     .then(r => r.json())
     .then(list => {
       if (!Array.isArray(list) || !list.length) { listEl.innerHTML = '<div style="text-align:center;color:#888;padding:20px;font-size:13px">お知らせはまだありません</div>'; return; }
-      listEl.innerHTML = list.map(a => `<div style="border-bottom:1px solid #f0f0f0;padding:12px 0">
-        <div style="font-size:11px;color:#888;font-weight:600;margin-bottom:4px">${fmtAnnounceDate(a.ts)}・${USER_NAMES[a.user]||a.user}</div>
-        <div style="font-size:14px;color:#222;white-space:pre-wrap">${a.message}</div>
+      listEl.innerHTML = list.map(a => `<div style="border-bottom:1px solid #f0f0f0;padding:12px 0;display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;color:#888;font-weight:600;margin-bottom:4px">${fmtAnnounceDate(a.ts)}・${USER_NAMES[a.user]||a.user}</div>
+          <div style="font-size:14px;color:#222;white-space:pre-wrap">${a.message}</div>
+        </div>
+        <button onclick="deleteAnnounce('${a.ts}','${a.user}')" style="background:none;border:none;color:#e53935;font-size:12px;cursor:pointer;padding:2px 4px;white-space:nowrap">削除</button>
       </div>`).join('');
     })
     .catch(() => { listEl.innerHTML = '<div style="text-align:center;color:#e53935;padding:20px;font-size:13px">読み込みに失敗しました</div>'; });
+}
+
+function deleteAnnounce(ts, user) {
+  if (!confirm('このお知らせを削除しますか？')) return;
+  fetch(GAS_URL + '?type=delete_announcement&ts=' + encodeURIComponent(ts) + '&user=' + encodeURIComponent(user))
+    .then(() => { renderAnnounceScreen(); loadAnnounceHomeBox(); })
+    .catch(() => { alert('削除に失敗しました'); });
 }
 
 function submitAnnounce() {
