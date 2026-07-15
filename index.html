@@ -1629,6 +1629,7 @@ function saveCompanyCal(){
 }
 
 function distKm(a,b){
+  if(a.lat==null||a.lng==null||b.lat==null||b.lng==null) return null;
   const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLng=(b.lng-a.lng)*Math.PI/180;
   const s=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
   return R*2*Math.atan2(Math.sqrt(s),Math.sqrt(1-s));
@@ -2177,8 +2178,8 @@ function calcETAs(route){
   };
   return route.map((f,i)=>{
     let result=null;
-    if(cur&&f.lat&&f.lng){
-      const km=distKm(cur,f);
+    const km=(cur&&cur.lat!=null&&cur.lng!=null&&f.lat!=null&&f.lng!=null)?distKm(cur,f):null;
+    if(km!=null){
       const travelMin=Math.round(km/SPEED_KMH*60);
       totalMin+=travelMin;
       if(hasGPS||i>0) result=mkResult();
@@ -2224,7 +2225,8 @@ function renderRoute(route){
     const closedTag=todayClosed(f)?`<span class="badge b-closed">本日休診</span>`:'';
     const lateTag=(etas[i]&&f.dl!=='free'&&(etas[i].overflow||toMin(etas[i].tod)>toMin(f.dl)))?`<span class="badge b-closed">⏰ 締切超過の恐れ</span>`:'';
     const noteTag=f.cn?`<span class="badge b-warn">⚠ ${f.cn}</span>`:'';
-    const dist=i>0?`<span class="dist-tag">前から約${distKm(route[i-1],f).toFixed(1)}km</span>`:'';
+    const distKmVal=i>0?distKm(route[i-1],f):null;
+    const dist=i>0?(distKmVal!=null?`<span class="dist-tag">前から約${distKmVal.toFixed(1)}km</span>`:`<span class="dist-tag">📍位置情報なし</span>`):'';
     const isFirst=i===0, isLast=i===route.length-1;
     const etaTag=etas[i]?`<span style="font-size:12px;color:#1a6fb5;font-weight:700;margin-left:6px">🕐 ${etas[i].text}着</span>`:'';
     return `<li class="route-item" id="ri_${i}" data-idx="${i}">
