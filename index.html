@@ -261,6 +261,7 @@ input.att-input[type="time"]{min-width:0}
           <label style="font-size:13px"><input type="checkbox" value="6" class="af-cd"> 土</label>
         </div>
       </div>
+      <div><label style="font-size:12px;color:#888">診察時間</label><input id="afHours" class="att-input" placeholder="例：9:00〜18:00" style="width:100%;box-sizing:border-box"></div>
       <div><label style="font-size:12px;color:#888">納品締切時間（空欄＝自由）</label><input type="time" id="afDl" class="att-input" style="width:100%;box-sizing:border-box"></div>
       <div><label style="font-size:12px;color:#888">納品可能日</label><input id="afDelivery" class="att-input" placeholder="月・火・水・木・金" style="width:100%;box-sizing:border-box"></div>
       <div><label style="font-size:12px;color:#888">ランク</label><input id="afRank" class="att-input" style="width:100%;box-sizing:border-box"></div>
@@ -1214,6 +1215,7 @@ function openFacilityDetail(idx) {
     ['担当', f.staff||''],
     ['TEL', f.tel ? `<a href="tel:${f.tel}" style="color:var(--blue);font-weight:700">${f.tel}</a>` : ''],
     ['住所', f.a ? `<a href="https://maps.google.com/?q=${encodeURIComponent(f.a)}" target="_blank" style="color:var(--blue)">${f.a}</a>` : ''],
+    ['診察時間', f.hours||''],
     ['納品可能日', f.delivery||''],
     ['休診日', (()=>{
       const cn = f.cn||'';
@@ -1311,12 +1313,13 @@ function openAddFacModal(editIdx=null){
     document.getElementById('afStaff').value = f.staff||'';
     document.getElementById('afCode').value = f.code||'';
     document.getElementById('afDelivery').value = f.delivery||'';
+    document.getElementById('afHours').value = f.hours||'';
     document.getElementById('afDl').value = (f.dl && f.dl!=='free') ? f.dl : '';
     document.getElementById('afRank').value = f.rank||'';
     document.getElementById('afTanomoto').value = f.tanomoto||'';
     (f.cd||[]).forEach(d=>{ const cb=document.querySelector(`.af-cd[value="${d}"]`); if(cb) cb.checked=true; });
   } else {
-    ['afName','afAddr','afTel','afStaff','afCode','afDelivery','afDl','afRank','afTanomoto'].forEach(id=>{ document.getElementById(id).value=''; });
+    ['afName','afAddr','afTel','afStaff','afCode','afDelivery','afHours','afDl','afRank','afTanomoto'].forEach(id=>{ document.getElementById(id).value=''; });
   }
   document.getElementById('addFacModal').style.display='flex';
 }
@@ -1361,6 +1364,7 @@ function saveNewFacility(){
     staff: document.getElementById('afStaff').value.trim(),
     code: document.getElementById('afCode').value.trim(),
     delivery: document.getElementById('afDelivery').value.trim(),
+    hours: document.getElementById('afHours').value.trim(),
     dl: document.getElementById('afDl').value || null,
     rank: document.getElementById('afRank').value.trim(),
     tanomoto: document.getElementById('afTanomoto').value.trim(),
