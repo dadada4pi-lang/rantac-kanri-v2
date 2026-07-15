@@ -2063,6 +2063,41 @@ function computeRoute(facs,startPos){
   const deferSeq=nnSets(deferred,deferStart,allSets);
   deferSeq.forEach(f=>route.push(f));
 
+  // 2-opt改善：締切・セットのグルーピングを崩さない範囲で、交差した無駄な移動を解消する
+  function totalDist(r){
+    let d=0,pos=start;
+    for(const f of r){d+=distKm(pos,f);pos=f;}
+    return d;
+  }
+  function groupsIntact(r){
+    const seen={};
+    for(let i=0;i<r.length;i++){
+      const g=allSets[r[i].n];
+      if(!g)continue;
+      if(!seen[g])seen[g]={end:i};
+      else{ if(i!==seen[g].end+1)return false; seen[g].end=i; }
+    }
+    return true;
+  }
+  function twoOptImprove(r0){
+    let r=r0;
+    let improved=true;
+    while(improved){
+      improved=false;
+      for(let i=0;i<r.length-1;i++){
+        for(let j=i+1;j<r.length;j++){
+          const cand=[...r.slice(0,i),...r.slice(i,j+1).reverse(),...r.slice(j+1)];
+          if(totalDist(cand)<totalDist(r)-1e-6 && routeValid(cand) && groupsIntact(cand)){
+            r=cand; improved=true;
+          }
+        }
+      }
+    }
+    return r;
+  }
+  const improvedRoute=twoOptImprove(route);
+  route.splice(0,route.length,...improvedRoute);
+
   return route;
 }
 
