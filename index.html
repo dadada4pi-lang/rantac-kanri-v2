@@ -517,7 +517,7 @@ input.att-input[type="time"]{min-width:0}
     <div id="alertBox" style="display:none" class="alert"></div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
       <span style="font-size:13px;color:#555;font-weight:600">出発時刻</span>
-      <input type="time" id="departureTime" style="border:1.5px solid #ccc;border-radius:8px;padding:5px 10px;font-size:14px;font-weight:600;color:#333" oninput="if(window.currentRoute)renderRoute(window.currentRoute)">
+      <input type="time" id="departureTime" style="border:1.5px solid #ccc;border-radius:8px;padding:5px 10px;font-size:14px;font-weight:600;color:#333" oninput="onDepartureTimeChange()">
       <button id="gpsBtn" onclick="useCurrentLocation()" style="background:#e8f5e9;color:#2e7d32;border:1.5px solid #a5d6a7;border-radius:8px;padding:5px 12px;font-size:13px;font-weight:600;white-space:nowrap">📍 現在地を出発地に</button>
       <button onclick="resetToCompany()" style="background:#fff8e1;color:#e65100;border:1.5px solid #ffcc80;border-radius:8px;padding:5px 12px;font-size:13px;font-weight:600;white-space:nowrap">🏢 会社に戻す</button>
     </div>
@@ -2005,6 +2005,16 @@ function getDepMin(){
     if(!isNaN(h)&&!isNaN(m))return h*60+m;
   }
   return null;
+}
+
+// 出発時刻を変更した時、表示だけでなく並び順も出発時刻基準で組み直す
+// （組み直さないと「作成時の出発時刻では間に合っていた順番」が新しい出発時刻では
+//  間に合わないまま固定表示され続けてしまう）
+function onDepartureTimeChange(){
+  if(!window.currentRoute||!window.currentRoute.length)return;
+  window.currentRoute=computeRoute(window.currentRoute,undefined,getDepMin());
+  selectedFacilities=window.currentRoute;
+  renderRoute(window.currentRoute);
 }
 
 function computeRoute(facs,startPos,depMin){
@@ -4692,6 +4702,7 @@ updateUserUI();
         selectedFacilities = saved.route;
         goTo('routeScreen');
         renderRoute(saved.route);
+        setTimeout(onDepartureTimeChange, 0);
         return;
       } else {
         localStorage.removeItem('_savedRoute');
