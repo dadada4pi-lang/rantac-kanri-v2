@@ -1998,7 +1998,16 @@ function nearestNeighborWithSets(facs,startPoint,sets){
   return result;
 }
 
-function computeRoute(facs,startPos){
+function getDepMin(){
+  const el=document.getElementById('departureTime');
+  if(el&&el.value){
+    const[h,m]=el.value.split(':').map(Number);
+    if(!isNaN(h)&&!isNaN(m))return h*60+m;
+  }
+  return null;
+}
+
+function computeRoute(facs,startPos,depMin){
   const start=startPos||window.gpsPos||COMPANY_POS;
   const allSets=detectSets(facs);
   const free=facs.filter(f=>f.dl==='free'||f.dl===null||f.dl===undefined);
@@ -2020,8 +2029,15 @@ function computeRoute(facs,startPos){
 
   // 時間自由施設：可能な限り締切施設の合間に組み込む
   const AVG=30;
-  const now=new Date();
-  const nowMin=now.getHours()<13?now.getHours()*60+now.getMinutes():8*60;
+  // 出発時刻が指定されていればそれを使う（画面表示のETA計算と基準を合わせるため）。
+  // 未指定の場合のみ現在時刻から推定（夜間は翌朝8:00とみなす）。
+  let nowMin;
+  if(depMin!=null){
+    nowMin=depMin;
+  } else {
+    const now=new Date();
+    nowMin=now.getHours()<13?now.getHours()*60+now.getMinutes():8*60;
+  }
 
   // ルートが有効か（締切違反なし）をシミュレート
   function routeValid(testRoute){
@@ -2186,13 +2202,13 @@ function buildRoute(){
     navigator.geolocation.getCurrentPosition(
       pos=>{
         window.gpsPos={lat:pos.coords.latitude,lng:pos.coords.longitude};
-        renderRoute(computeRoute(selectedFacilities));
+        renderRoute(computeRoute(selectedFacilities,undefined,getDepMin()));
       },
-      ()=>renderRoute(computeRoute(selectedFacilities)),
+      ()=>renderRoute(computeRoute(selectedFacilities,undefined,getDepMin())),
       {timeout:4000,maximumAge:60000}
     );
   } else {
-    renderRoute(computeRoute(selectedFacilities));
+    renderRoute(computeRoute(selectedFacilities,undefined,getDepMin()));
   }
 }
 
@@ -2364,7 +2380,7 @@ function resetToCompany(){
   btn.style.background='#e8f5e9';
   status.style.color='#666';
   status.textContent='🏢 会社から出発（愛知県一宮市伝法寺）';
-  if(window.currentRoute) renderRoute(computeRoute(selectedFacilities));
+  if(window.currentRoute) renderRoute(computeRoute(selectedFacilities,undefined,getDepMin()));
 }
 
 function useCurrentLocation(){
@@ -2381,7 +2397,7 @@ function useCurrentLocation(){
       btn.style.background='#c8e6c9';
       status.style.color='#2e7d32';
       status.textContent=`📍 現在地から出発（${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}）`;
-      if(window.currentRoute) renderRoute(computeRoute(selectedFacilities));
+      if(window.currentRoute) renderRoute(computeRoute(selectedFacilities,undefined,getDepMin()));
     },
     err=>{
       btn.textContent='📍 現在地を出発地に';
@@ -2616,7 +2632,7 @@ function applyOcrAndRoute(){
     const ok=confirm(`⚠️ 本日（${DAYS[today]}曜）は休診の施設が含まれています：\n\n${closedOnes.map(f=>f.n).join('\n')}\n\nこのままルートに含めますか？`);
     if(!ok)return;
   }
-  renderRoute(computeRoute(selectedFacilities));
+  renderRoute(computeRoute(selectedFacilities,undefined,getDepMin()));
   goTo('routeScreen');
 }
 
