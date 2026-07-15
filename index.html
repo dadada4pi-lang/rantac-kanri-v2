@@ -261,6 +261,7 @@ input.att-input[type="time"]{min-width:0}
           <label style="font-size:13px"><input type="checkbox" value="6" class="af-cd"> 土</label>
         </div>
       </div>
+      <div><label style="font-size:12px;color:#888">休診日メモ（例：日祝午後休診）</label><input id="afCn" class="att-input" placeholder="例：日祝午後休診" style="width:100%;box-sizing:border-box"></div>
       <div><label style="font-size:12px;color:#888">診察時間</label><input id="afHours" class="att-input" placeholder="例：9:00〜18:00" style="width:100%;box-sizing:border-box"></div>
       <div><label style="font-size:12px;color:#888">納品締切時間（空欄＝自由）</label><input type="time" id="afDl" class="att-input" style="width:100%;box-sizing:border-box"></div>
       <div><label style="font-size:12px;color:#888">納品可能日</label><input id="afDelivery" class="att-input" placeholder="月・火・水・木・金" style="width:100%;box-sizing:border-box"></div>
@@ -1314,12 +1315,13 @@ function openAddFacModal(editIdx=null){
     document.getElementById('afCode').value = f.code||'';
     document.getElementById('afDelivery').value = f.delivery||'';
     document.getElementById('afHours').value = f.hours||'';
+    document.getElementById('afCn').value = f.cn||'';
     document.getElementById('afDl').value = (f.dl && f.dl!=='free') ? f.dl : '';
     document.getElementById('afRank').value = f.rank||'';
     document.getElementById('afTanomoto').value = f.tanomoto||'';
     (f.cd||[]).forEach(d=>{ const cb=document.querySelector(`.af-cd[value="${d}"]`); if(cb) cb.checked=true; });
   } else {
-    ['afName','afAddr','afTel','afStaff','afCode','afDelivery','afHours','afDl','afRank','afTanomoto'].forEach(id=>{ document.getElementById(id).value=''; });
+    ['afName','afAddr','afTel','afStaff','afCode','afDelivery','afHours','afCn','afDl','afRank','afTanomoto'].forEach(id=>{ document.getElementById(id).value=''; });
   }
   document.getElementById('addFacModal').style.display='flex';
 }
@@ -1357,6 +1359,9 @@ function saveNewFacility(){
   const name = document.getElementById('afName').value.trim();
   if(!name){ alert('施設名を入力してください'); return; }
   const cd = [...document.querySelectorAll('.af-cd:checked')].map(cb=>Number(cb.value));
+  // 編集時は既存の緯度経度・機器情報を引き継ぐ（このフォームに入力欄がないため、
+  // nullで上書きすると地図上の距離計算が壊れる＝過去に実際に起きた不具合）
+  const existing = _editFacIdx !== null ? DB[_editFacIdx] : null;
   const fac = {
     n: name,
     a: document.getElementById('afAddr').value.trim(),
@@ -1368,7 +1373,11 @@ function saveNewFacility(){
     dl: document.getElementById('afDl').value || null,
     rank: document.getElementById('afRank').value.trim(),
     tanomoto: document.getElementById('afTanomoto').value.trim(),
-    cd, cn:'', lat:null, lng:null, holiday:'', devices:{}
+    cd, cn: document.getElementById('afCn').value.trim(),
+    lat: existing ? existing.lat : null,
+    lng: existing ? existing.lng : null,
+    holiday: existing ? (existing.holiday||'') : '',
+    devices: existing ? (existing.devices||{}) : {}
   };
   if(_editFacIdx !== null){
     // 既存施設に_idがなければ付与
