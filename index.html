@@ -1818,8 +1818,9 @@ function detectSets(facs){
   const union=(a,b)=>{a=find(a);b=find(b);if(a!==b)p[b]=a};
   for(let i=0;i<facs.length;i++)for(let j=i+1;j<facs.length;j++){
     const fi=facs[i],fj=facs[j];
-    if(fi.dl==='free'||fj.dl==='free')continue;
-    if(distKm(fi,fj)<=DIST&&Math.abs(toMin(fi.dl)-toMin(fj.dl))<=DL_DIFF)union(fi.n,fj.n);
+    if(!fi.dl||fi.dl==='free'||!fj.dl||fj.dl==='free')continue;
+    const dij=distKm(fi,fj);
+    if(dij!=null&&dij<=DIST&&Math.abs(toMin(fi.dl)-toMin(fj.dl))<=DL_DIFF)union(fi.n,fj.n);
   }
   const groups={};
   facs.forEach(f=>{const r=find(f.n);(groups[r]=groups[r]||[]).push(f.n)});
@@ -2212,14 +2213,14 @@ function renderRoute(route){
     alertBox.style.display='block';
   } else alertBox.style.display='none';
 
-  const dl12=route.filter(f=>f.dl!=='free'&&f.dl!=='13:00').length;
+  const dl12=route.filter(f=>f.dl&&f.dl!=='free'&&f.dl!=='13:00').length;
   const dl13=route.filter(f=>f.dl==='13:00').length;
-  const fr=route.filter(f=>f.dl==='free').length;
+  const fr=route.filter(f=>!f.dl||f.dl==='free').length;
   document.getElementById('routeInfo').innerHTML=`全${route.length}件 ／ <b>12:00締め</b> ${dl12}件 ／ <b>13:00締め</b> ${dl13}件 ／ 時間自由 ${fr}件`;
 
   if(window._routeMapVisible) updateRouteMap(route);
   document.getElementById('routeList').innerHTML=route.map((f,i)=>{
-    const isFree=f.dl==='free';
+    const isFree=!f.dl||f.dl==='free';
     const g=sets[f.n];
     const setTag=g?`<span class="set-tag">🔗 ${groupLabels[g]}</span>`:'';
     const closedTag=todayClosed(f)?`<span class="badge b-closed">本日休診</span>`:'';
@@ -2413,7 +2414,7 @@ function updateRouteMap(route){
 
   valid.forEach((f,i)=>{
     const idx=route.indexOf(f)+1;
-    const color=f.dl==='free'?'#43a047':(f.dl==='13:00'?'#fb8c00':'#e53935');
+    const color=(!f.dl||f.dl==='free')?'#43a047':(f.dl==='13:00'?'#fb8c00':'#e53935');
     const icon=L.divIcon({
       html:`<div style="background:${color};color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)">${idx}</div>`,
       className:'',iconSize:[26,26],iconAnchor:[13,13]
