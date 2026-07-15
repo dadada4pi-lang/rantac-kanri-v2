@@ -2028,7 +2028,8 @@ function computeRoute(facs,startPos,depMin){
   }
 
   // 時間自由施設：可能な限り締切施設の合間に組み込む
-  const AVG=30;
+  // 画面表示のETA計算(calcETAs)と同じ速度・滞在時間を使う（基準がずれると「間に合うはず」が実際は間に合わない事態になる）
+  const AVG=25, STOP_MIN=10;
   // 出発時刻が指定されていればそれを使う（画面表示のETA計算と基準を合わせるため）。
   // 未指定の場合のみ現在時刻から推定（夜間は翌朝8:00とみなす）。
   let nowMin;
@@ -2045,6 +2046,7 @@ function computeRoute(facs,startPos,depMin){
     for(const f of testRoute){
       t+=distKm(pos,f)/AVG*60;
       if(f.dl&&f.dl!=='free'&&t>toMin(f.dl))return false;
+      t+=STOP_MIN;
       pos=f;
     }
     return true;
