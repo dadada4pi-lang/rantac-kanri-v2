@@ -887,7 +887,7 @@ function goTo(id, _fromPop){
     populatePrintPeriodSel();
     loadAllDataFromGAS();
   }
-  if(id==='myDataScreen'){ renderMyData(); if(currentUser==='yamada'||currentUser==='kamiya') loadAllDataFromGAS(); else loadMyDataFromGAS(); }
+  if(id==='myDataScreen'){ renderMyData(); loadPaidLeaveBalance(); if(currentUser==='yamada'||currentUser==='kamiya') loadAllDataFromGAS(); else loadMyDataFromGAS(); }
   if(id==='delivLogScreen'){ renderDelivLogScreen(); }
   if(id==='attendanceScreen'){ updatePaidLeaveBtnLabel(); }
 }
@@ -2919,6 +2919,7 @@ function loadPaidLeaveBalance() {
         localStorage.setItem('paidLeave_' + u, paidLeaveBalance[u]);
       });
       updatePaidLeaveBtnLabel();
+      updateMyDataPlBadge();
     })
     .catch(() => {
       ALL_USERS.forEach(u => {
