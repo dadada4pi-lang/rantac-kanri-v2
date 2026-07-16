@@ -1436,9 +1436,8 @@ function renderFacilityList(){
       <div class="fac-list-name">${f.n}${closed?` <span class="badge b-closed">本日休診</span>`:''}</div>
       <div class="fac-list-sub">${f.a||''}</div>
       <div class="fac-list-meta">
-        <span style="color:#e67e22">🗓 休診：${cdDays}</span>
+        <span style="color:#e67e22">🗓 休診：${cdDays}${f.cn?` / ${f.cn}`:''}</span>
         <span class="badge ${dlBadgeClass(f.dl)}" style="margin-left:8px">${dlBadgeText(f.dl)}</span>
-        ${f.cn?`<span style="font-size:11px;color:#e74c3c;margin-left:6px">⚠ ${f.cn}</span>`:''}
       </div>
     </div>`;
   }).join('');
