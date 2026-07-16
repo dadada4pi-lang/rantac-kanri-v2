@@ -712,7 +712,7 @@ input.att-input[type="time"]{min-width:0}
   <div style="display:flex;border-bottom:2px solid #eee;background:#fff">
     <button id="myDataTabAtt" onclick="switchMyDataTab('att')"
       style="flex:1;padding:12px 0;border:none;background:none;font-size:14px;font-weight:700;color:#1a56db;border-bottom:2px solid #1a56db;margin-bottom:-2px;cursor:pointer">
-      出退勤
+      出退勤<span id="myDataPlBadge" style="font-size:12px;font-weight:600;color:#e65100;margin-left:6px"></span>
     </button>
     <button id="myDataTabRep" onclick="switchMyDataTab('rep')"
       style="flex:1;padding:12px 0;border:none;background:none;font-size:14px;font-weight:700;color:#aaa;cursor:pointer">
@@ -4349,6 +4349,13 @@ function refreshMyData() {
   setTimeout(done, 1200);
 }
 
+function updateMyDataPlBadge() {
+  const badge = document.getElementById('myDataPlBadge');
+  if (!badge) return;
+  const v = getPaidLeaveRemaining(_myDataUser);
+  badge.textContent = (v !== null && v !== undefined) ? `（有給残${v}日）` : '';
+}
+
 function renderMyData() {
   _myDataUser = _myDataUser || currentUser;
   const isYamada = currentUser === 'yamada' || currentUser === 'kamiya' || currentUser === 'kaicho';
@@ -4374,6 +4381,7 @@ function renderMyData() {
   if (repTab) repTab.style.display = noRepUser ? 'none' : '';
   if (noRepUser && _myDataTab === 'rep') { _myDataTab = 'att'; switchMyDataTab('att'); }
   document.getElementById('myDataTitle').textContent = (isYamada ? (USER_NAMES[_myDataUser]||'') + 'の' : '') + (noRepUser ? '出退勤' : '出退勤・報告書');
+  updateMyDataPlBadge();
   renderMyDataBody();
 }
 
@@ -4390,6 +4398,7 @@ function switchMyDataUser(u) {
   if (repTab) repTab.style.display = noRepUser ? 'none' : '';
   if (noRepUser && _myDataTab === 'rep') { _myDataTab = 'att'; switchMyDataTab('att'); }
   document.getElementById('myDataTitle').textContent = (USER_NAMES[u]||'') + 'の' + (noRepUser ? '出退勤' : '出退勤・報告書');
+  updateMyDataPlBadge();
   renderMyDataBody();
 }
 
