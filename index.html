@@ -559,12 +559,6 @@ input.att-input[type="time"]{min-width:0}
       <button id="detailTabHoriuchi" class="btn-secondary" style="flex:1;min-width:80px" onclick="switchDetailTab('horiuchi')">堀内さん</button>
     </div>
     <div id="workDetail" style="margin-bottom:16px"></div>
-    <div class="sec-label" style="margin-bottom:8px">配達記録</div>
-    <div style="display:flex;gap:6px;margin-bottom:12px">
-      <button id="delivTabKishi" class="btn-secondary" style="flex:1;font-weight:700;background:#e8f0fe;color:var(--blue);border:2px solid var(--blue)" onclick="switchDelivTab('kishi')">岸さん</button>
-      <button id="delivTabMiyakawa" class="btn-secondary" style="flex:1" onclick="switchDelivTab('miyakawa')">宮川さん</button>
-    </div>
-    <div id="delivDetail" style="margin-bottom:16px"></div>
     <div id="paidLeaveSection" style="border-top:1px solid #f0f0f0;padding-top:14px;margin-top:4px;display:none">
       <div class="sec-label" style="margin-bottom:8px">有給管理</div>
       <div id="paidLeaveList"></div>
@@ -4100,36 +4094,6 @@ function getCurrentPeriod() {
   };
 }
 
-function switchDelivTab(user) {
-  ['kishi','miyakawa'].forEach(u => {
-    const btn = document.getElementById('delivTab' + u.charAt(0).toUpperCase() + u.slice(1));
-    if (!btn) return;
-    if (u === user) { btn.style.background='#e8f0fe'; btn.style.color='var(--blue)'; btn.style.border='2px solid var(--blue)'; }
-    else { btn.style.background=''; btn.style.color=''; btn.style.border=''; }
-  });
-  const box = document.getElementById('delivDetail');
-  if (!box) return;
-  const entries = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith(`deliveryLog_${user}_`)) {
-      const date = key.replace(`deliveryLog_${user}_`, '');
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { localStorage.removeItem(key); i--; continue; }
-      const names = JSON.parse(localStorage.getItem(key) || '[]');
-      entries.push({ date, names });
-    }
-  }
-  if (!entries.length) { box.innerHTML = '<div style="color:#888;text-align:center;padding:16px;font-size:13px">記録がありません</div>'; return; }
-  entries.sort((a,b) => b.date.localeCompare(a.date));
-  box.innerHTML = entries.map(e => {
-    const d = new Date(e.date + 'T00:00:00');
-    return `<div style="border-bottom:1px solid #f0f0f0;padding:10px 0">
-      <div style="font-weight:700;font-size:14px;margin-bottom:4px">${e.date.slice(5).replace('-','/')}（${DAYS[d.getDay()]}）</div>
-      ${e.names.map((n,i) => `<div style="font-size:13px;color:#555;padding:2px 0">${i+1}. ${n}</div>`).join('')}
-    </div>`;
-  }).join('');
-}
-
 function renderWorkSummary() {
   const now = new Date();
   // 20日締め期間キー（今日が21日以降なら翌月、それ以外は当月）
@@ -4163,7 +4127,6 @@ function renderWorkSummary() {
   });
   document.getElementById('workSummary').innerHTML = html;
   switchDetailTab(_detailUser || 'kishi');
-  switchDelivTab('kishi');
 }
 
 let _detailUser = 'kishi';
