@@ -2252,9 +2252,8 @@ function buildRoute(){
     if(!ok)return;
   }
   goTo('routeScreen');
-  const _now=new Date();
   const _dep=document.getElementById('departureTime');
-  if(_dep&&!_dep.value) _dep.value=`${String(_now.getHours()).padStart(2,'0')}:${String(_now.getMinutes()).padStart(2,'0')}`;
+  if(_dep&&!_dep.value) _dep.value='09:40';
   // GPS取得してからルート計算
   if(navigator.geolocation){
     navigator.geolocation.getCurrentPosition(
