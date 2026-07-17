@@ -4169,6 +4169,7 @@ function runBulkAssign() {
         allowed.forEach(dateStr => {
           const key = dateStr + '_' + route;
           const cnt = countOf(key);
+          if (cnt >= MAX_PER_DAY) return; // 1日で回れる件数を超える日は候補から除外
           const existingFacs = facsOf(key);
           const avgDist = existingFacs.length && f.lat != null
             ? existingFacs.reduce((s,ef) => s + (distKm(f,ef)||0), 0) / existingFacs.length
@@ -4176,13 +4177,16 @@ function runBulkAssign() {
           const score = cnt * 1000 + avgDist;
           if (score < bestScore) { bestScore = score; bestDay = dateStr; }
         });
+        if (bestDay == null) { _baUnassigned.push(f.n); return; } // どの日も上限に達している
         const key = bestDay + '_' + route;
         if (!_baPreview[key]) _baPreview[key] = [];
         _baPreview[key].push(f.n);
       };
 
-      // まずエリア（近距離）でクラスタ化し、同じエリアの施設は極力同じ日・同じルートにまとめる。
-      // クラスタが大きいほど地域の代表性が高いので先に確定させる。
+      // まずエリア（近距離）でクラスタ化し、同じエリアの施設は同じルート（担当者）に揃える。
+      // ただし1日で回れる件数には限りがあるので、日はクラスタ単位でなく1件ずつ混雑度を見て
+      // 分散させる（大きなクラスタを丸ごと1日に詰め込まない）。
+      const MAX_PER_DAY = 6; // 1日・1ルートあたりの目安上限件数
       const clusters = baGeoCluster(facs, 8);
       clusters.sort((a,b) => b.length - a.length);
 
@@ -4194,8 +4198,10 @@ function runBulkAssign() {
         const allowedPerFac = cluster.map(f => baAllowedDays(f, candidateDays));
         const intersection = candidateDays.filter(d => allowedPerFac.every(days => days.includes(d)));
 
-        if (cluster.length === 1 || !intersection.length) {
-          // 単独、またはクラスタ全員が共通で入れる日が無い場合は1件ずつ通常通り配置
+        if (cluster.length === 1 || !intersection.length || cluster.length > MAX_PER_DAY) {
+          // 単独、共通で入れる日が無い、またはクラスタが大きすぎて1日に収まらない場合は
+          // 1件ずつ「その日・そのルートの件数が少ない日」を優先して分散配置する
+          // （ルートは同じエリアで揃えたままなので、担当者は変わらない）
           cluster.forEach(f => placeOne(f, route));
           return;
         }
@@ -4208,6 +4214,7 @@ function runBulkAssign() {
         intersection.forEach(dateStr => {
           const key = dateStr + '_' + route;
           const cnt = countOf(key);
+          if (cnt + cluster.length > MAX_PER_DAY) return; // その日に入れると溢れる場合は候補から除外
           const existingFacs = facsOf(key);
           const avgDist = existingFacs.length
             ? existingFacs.reduce((s,ef) => s + (distKm(centroid,ef)||0), 0) / existingFacs.length
@@ -4215,6 +4222,12 @@ function runBulkAssign() {
           const score = cnt * 1000 + avgDist;
           if (score < bestScore) { bestScore = score; bestDay = dateStr; }
         });
+
+        if (bestDay == null) {
+          // 溢れずに収まる日が無ければ1件ずつ分散配置にフォールバック
+          cluster.forEach(f => placeOne(f, route));
+          return;
+        }
         const key = bestDay + '_' + route;
         if (!_baPreview[key]) _baPreview[key] = [];
         cluster.forEach(f => _baPreview[key].push(f.n));
