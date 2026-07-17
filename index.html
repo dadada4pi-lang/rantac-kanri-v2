@@ -2236,9 +2236,8 @@ function calcETAs(route){
   const depStr=depInput&&depInput.value?depInput.value:`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   let [h0,m0]=depStr.split(':').map(Number);
   let totalMin=h0*60+m0;
-  let cur=window.gpsPos||null;
+  let cur=window.gpsPos||COMPANY_POS;
   const SPEED_KMH=25, STOP_MIN=10;
-  let hasGPS=!!cur;
   const mkResult=()=>{
     const days=Math.floor(totalMin/1440);
     const tod=((totalMin%1440)+1440)%1440;
@@ -2252,7 +2251,7 @@ function calcETAs(route){
     if(km!=null){
       const travelMin=Math.round(km/SPEED_KMH*60);
       totalMin+=travelMin;
-      if(hasGPS||i>0) result=mkResult();
+      result=mkResult();
     } else if(i>0){
       result=mkResult();
     }
