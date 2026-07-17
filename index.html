@@ -1063,7 +1063,7 @@ const STANDARD_DEVICES = ['分包機','診察台','超音波','ICU','生化学',
 // 施設データをGASから読み込む（localStorageをキャッシュとして使用）
 const _BASE_DB_LEN = DB.length; // コード内の元の施設数を記録
 
-(function loadFacilitiesFromGAS(){
+window._facilitiesLoadPromise = (function loadFacilitiesFromGAS(){
   // まずlocalStorageキャッシュを反映（即時表示）
   const cached = JSON.parse(localStorage.getItem('facilitiesCache') || 'null');
   if (cached && cached.length) {
@@ -1075,7 +1075,7 @@ const _BASE_DB_LEN = DB.length; // コード内の元の施設数を記録
     old.forEach(f => DB.push(f));
   }
   // GASから最新を取得してキャッシュ更新
-  fetch(GAS_URL + '?type=get_facilities')
+  return fetch(GAS_URL + '?type=get_facilities')
     .then(r => r.json())
     .then(facilities => {
       if (!Array.isArray(facilities) || !facilities.length) return;
@@ -3817,12 +3817,16 @@ function dpBuildRouteFrom(dateStr, route) {
 
 function buildRouteFromNames(names) {
   if (!names.length) { alert('この日のこのルートには施設が選択されていません'); return; }
-  const facs = names.map(n => DB.find(f => f.n === n)).filter(Boolean);
-  if (!facs.length) { alert('施設データが見つかりませんでした'); return; }
-  const missing = names.length - facs.length;
-  selectedFacilities = facs;
-  if (missing > 0) alert(`${missing}件の施設が見つからずルートから除外されました`);
-  buildRoute();
+  // 施設データの読み込み中に呼ばれると古いキャッシュと照合してしまい、
+  // 新規追加した施設が「見つからず除外」される事故が起きるため、GAS取得完了を待つ
+  Promise.resolve(window._facilitiesLoadPromise).then(() => {
+    const facs = names.map(n => DB.find(f => f.n === n)).filter(Boolean);
+    if (!facs.length) { alert('施設データが見つかりませんでした'); return; }
+    const missing = names.length - facs.length;
+    selectedFacilities = facs;
+    if (missing > 0) alert(`${missing}件の施設が見つからずルートから除外されました`);
+    buildRoute();
+  });
 }
 
 function dpScrollIntoView(el) {
