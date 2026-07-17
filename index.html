@@ -4016,10 +4016,32 @@ function onBaTextInput(val) {
   window._baTimer = setTimeout(() => showBaMatches(val), 300);
 }
 
+// 1行ずつ、まず完全一致（正式名称そのまま貼り付け）を優先し、
+// 完全一致が無い行だけ略称・部分一致（matchOcr）にフォールバックする。
+// これで「ブンブン動物病院」と正確に入力した時に「ブンブン動物病院ちくさ」等の
+// 無関係な候補まで一緒に出るのを防ぐ。
+function baMatchLines(text) {
+  const lines = text.split('\n').map(s => s.trim()).filter(Boolean);
+  const results = [];
+  const seen = new Set();
+  lines.forEach(line => {
+    const nline = normalize(line);
+    const exact = DB.find(f => normalizeDB(f.n) === nline);
+    if (exact) {
+      if (!seen.has(exact.n)) { seen.add(exact.n); results.push(exact); }
+      return;
+    }
+    matchOcr(line).forEach(f => {
+      if (!seen.has(f.n)) { seen.add(f.n); results.push(f); }
+    });
+  });
+  return results;
+}
+
 function showBaMatches(text) {
   const card = document.getElementById('baMatchCard');
   const btn = document.getElementById('baAssignBtn');
-  _baMatched = matchOcr(text);
+  _baMatched = baMatchLines(text);
   card.style.display = 'block';
   document.getElementById('baPreviewCard').style.display = 'none';
   renderBaMatchList();
