@@ -523,7 +523,14 @@ input.att-input[type="time"]{min-width:0}
 
   <!-- 入力 -->
   <div class="card" id="baInputCard">
-    <div class="sec-label">注文書の施設名をまとめて貼り付け</div>
+    <div class="sec-label">施設名・略称で検索して追加</div>
+    <div style="position:relative;margin-bottom:14px">
+      <input type="text" id="baSearchInput" placeholder="例：まさき　/ 茶屋ヶ坂　/ サンペット" autocomplete="off"
+        oninput="baOnSearch(this.value)"
+        style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit">
+      <div id="baSugList" style="display:none;position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid #ddd;border-radius:8px;max-height:260px;overflow-y:auto;z-index:20;box-shadow:0 4px 12px rgba(0,0,0,.12)"></div>
+    </div>
+    <div class="sec-label">または、注文書の施設名をまとめて貼り付け</div>
     <textarea id="baRawText" style="width:100%;border:2px solid #1a73e8;border-radius:10px;padding:14px;font-size:16px;min-height:120px;line-height:1.9;resize:none;outline:none;box-sizing:border-box" placeholder="1行1施設（略称OK）&#10;&#10;まさき&#10;石川&#10;ブンブン…" oninput="onBaTextInput(this.value)"></textarea>
     <div style="font-size:11px;color:#aaa;margin-top:4px;text-align:center">1行に1施設ずつ、まとめて貼り付けてください</div>
   </div>
@@ -3965,9 +3972,42 @@ function openBulkAssign() {
   _baPreview = {};
   _baUnassigned = [];
   document.getElementById('baRawText').value = '';
+  document.getElementById('baSearchInput').value = '';
+  document.getElementById('baSugList').style.display = 'none';
   document.getElementById('baMatchCard').style.display = 'none';
   document.getElementById('baPreviewCard').style.display = 'none';
   goTo('bulkAssignScreen');
+}
+
+document.addEventListener('click', function(e) {
+  const sug = document.getElementById('baSugList');
+  const input = document.getElementById('baSearchInput');
+  if (sug && sug.style.display !== 'none' && !sug.contains(e.target) && e.target !== input) sug.style.display = 'none';
+});
+
+function baOnSearch(val) {
+  const sug = document.getElementById('baSugList');
+  if (!val.trim()) { sug.style.display = 'none'; return; }
+  const results = searchDB(val.trim());
+  if (!results.length) {
+    sug.innerHTML = '<div style="padding:12px;font-size:13px;color:#aaa">見つかりませんでした</div>';
+    sug.style.display = 'block';
+    return;
+  }
+  sug.innerHTML = results.map(f => `<div onclick="baAddFromSearch('${f.n.replace(/'/g,"\\'")}')" style="padding:10px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:14px">
+    ${f.n}<div style="font-size:11px;color:#aaa">${f.a||''}</div>
+  </div>`).join('');
+  sug.style.display = 'block';
+}
+
+function baAddFromSearch(name) {
+  const ta = document.getElementById('baRawText');
+  const lines = ta.value.split('\n').map(s => s.trim()).filter(Boolean);
+  if (!lines.includes(name)) lines.push(name);
+  ta.value = lines.join('\n');
+  document.getElementById('baSearchInput').value = '';
+  document.getElementById('baSugList').style.display = 'none';
+  showBaMatches(ta.value);
 }
 
 function onBaTextInput(val) {
