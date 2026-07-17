@@ -349,6 +349,7 @@ input.att-input[type="time"]{min-width:0}
   <div class="home-body">
     <div class="home-meta"><span id="homeGreeting"></span></div>
     <div class="home-greeting">お疲れ様です</div>
+    <div id="todayOffBox" style="margin:10px 0"></div>
     <div id="announceHomeBox" style="margin:10px 0"></div>
     <button class="btn-home-go" onclick="goTo('methodScreen')">配達に行く</button>
     <div class="home-list">
@@ -862,7 +863,7 @@ function goTo(id, _fromPop){
     else{el.style.display='none';el.className=el.className.replace(' active','')}
   });
   window.scrollTo(0,0);
-  if(id==='homeScreen'){ document.getElementById('homeScreen').style.display='flex'; renderTodayDelivery(); loadAnnounceHomeBox(); }
+  if(id==='homeScreen'){ document.getElementById('homeScreen').style.display='flex'; renderTodayDelivery(); loadAnnounceHomeBox(); loadTodayOffBox(); }
   if(id==='announceScreen'){ renderAnnounceScreen(); }
   if(id==='methodScreen'){ renderMethodTodayPlan(); }
   if(id==='listScreen'){ window._staffFilter=''; window._rankFilter=''; renderFacilityList(); }
@@ -3634,6 +3635,25 @@ function loadAnnounceHomeBox() {
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px"><span style="font-size:16px">📢</span><span style="font-size:12px;font-weight:700;color:#b26a00">お知らせ</span></div>
         ${items}
         ${more}
+      </div>`;
+    })
+    .catch(() => { box.innerHTML = ''; });
+}
+
+function loadTodayOffBox() {
+  const box = document.getElementById('todayOffBox');
+  if (!box) return;
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  fetch(GAS_URL + '?type=get_today_status&date=' + dateStr)
+    .then(r => r.json())
+    .then(status => {
+      const users = Object.keys(status || {});
+      if (!users.length) { box.innerHTML = ''; return; }
+      const items = users.map(u => `<span style="display:inline-block;background:#fff;border:1px solid #cfd8dc;border-radius:14px;padding:4px 10px;margin:0 6px 6px 0;font-size:12px;color:#455a64">${USER_NAMES[u]||u}：${status[u]}</span>`).join('');
+      box.innerHTML = `<div style="background:#eceff1;border:1px solid #cfd8dc;border-radius:10px;padding:10px 12px">
+        <div style="font-size:12px;font-weight:700;color:#455a64;margin-bottom:6px">🏖 本日休みのスタッフ</div>
+        ${items}
       </div>`;
     })
     .catch(() => { box.innerHTML = ''; });
