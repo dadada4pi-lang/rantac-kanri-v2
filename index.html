@@ -4018,27 +4018,39 @@ function onBaTextInput(val) {
 
 function showBaMatches(text) {
   const card = document.getElementById('baMatchCard');
-  const list = document.getElementById('baMatchList');
   const btn = document.getElementById('baAssignBtn');
-  const matched = matchOcr(text);
-  _baMatched = matched;
+  _baMatched = matchOcr(text);
   card.style.display = 'block';
   document.getElementById('baPreviewCard').style.display = 'none';
-  if (!matched.length) {
+  renderBaMatchList();
+  btn.style.display = _baMatched.length ? 'block' : 'none';
+}
+
+function renderBaMatchList() {
+  const list = document.getElementById('baMatchList');
+  const btn = document.getElementById('baAssignBtn');
+  if (!_baMatched.length) {
     list.innerHTML = '<div style="color:#aaa;font-size:13px;padding:8px 0;line-height:1.8">一致する施設が見つかりませんでした。<br>略称で1行ずつ入力してみてください。</div>';
-    btn.style.display = 'none';
+    if (btn) btn.style.display = 'none';
     return;
   }
-  list.innerHTML = '<div style="font-size:12px;color:#888;margin-bottom:8px">不要な施設はチェックを外してください</div>' +
-    matched.map((f,i) => `
-    <div class="ocr-match-item">
+  list.innerHTML = '<div style="font-size:12px;color:#888;margin-bottom:8px">不要な施設はチェックを外す、または削除してください</div>' +
+    _baMatched.map((f,i) => `
+    <div class="ocr-match-item" style="display:flex;align-items:center;gap:8px">
       <input type="checkbox" id="bam_${i}" checked>
-      <label for="bam_${i}" class="ocr-match-name">${f.n}
+      <label for="bam_${i}" class="ocr-match-name" style="flex:1">${f.n}
         <span style="font-size:11px;color:#aaa;display:block">${f.a||''}</span>
       </label>
       <span class="badge ${dlBadgeClass(f.dl)}">${dlBadgeText(f.dl)}</span>
+      <button onclick="baRemoveMatch(${i})" style="background:none;border:none;color:#c62828;font-size:18px;cursor:pointer;padding:0 4px;line-height:1">×</button>
     </div>`).join('');
-  btn.style.display = 'block';
+}
+
+function baRemoveMatch(idx) {
+  _baMatched.splice(idx, 1);
+  renderBaMatchList();
+  const btn = document.getElementById('baAssignBtn');
+  if (btn) btn.style.display = _baMatched.length ? 'block' : 'none';
 }
 
 // 対象週（今週の月〜金）から休業日を除いた候補日
