@@ -4155,22 +4155,6 @@ function baAssignRoute(f, centroids) {
   return f.lng < COMPANY_POS.lng ? 'route1' : 'route2';
 }
 
-// 座標が近い施設同士をグループ化（締切は見ない、純粋に距離だけ＝エリアまとめ用）
-function baGeoCluster(facs, radiusKm) {
-  const p = {};
-  facs.forEach(f => p[f.n] = f.n);
-  const find = n => { while (p[n] && p[n] !== n) { p[n] = p[p[n]]; n = p[n]; } return n; };
-  const union = (a,b) => { a = find(a); b = find(b); if (a !== b) p[b] = a; };
-  for (let i = 0; i < facs.length; i++) {
-    for (let j = i+1; j < facs.length; j++) {
-      const d = distKm(facs[i], facs[j]);
-      if (d != null && d <= radiusKm) union(facs[i].n, facs[j].n);
-    }
-  }
-  const groups = {};
-  facs.forEach(f => { const r = find(f.n); (groups[r] = groups[r] || []).push(f); });
-  return Object.values(groups);
-}
 
 function runBulkAssign() {
   let facs = _baMatched.filter((f,i) => document.getElementById('bam_'+i)?.checked);
@@ -4239,6 +4223,11 @@ function runBulkAssign() {
         return t <= BA_WORKDAY_END;
       };
 
+      // 空の日をエリアの近さより優先してしまわないよう、既存施設が無い日は
+      // 「そこそこ近い」とみなす中立値を使う（0にすると常に空の日が最優先されてしまい、
+      // 近くの施設が集まっている日より空の日を選んでしまう）
+      const BA_EMPTY_DAY_BASELINE_KM = 15;
+
       const placeOne = (f, route) => {
         const allowed = baAllowedDaysForRoute(f, candidateDays, route);
         if (!allowed.length) { _baUnassigned.push(f.n); return; }
@@ -4247,12 +4236,10 @@ function runBulkAssign() {
           const key = dateStr + '_' + route;
           const existingFacs = facsOf(key);
           if (!baFeasible([...existingFacs, f])) return; // その日に追加すると回りきれない
-          const cnt = countOf(key);
           const avgDist = existingFacs.length && f.lat != null
             ? existingFacs.reduce((s,ef) => s + (distKm(f,ef)||0), 0) / existingFacs.length
-            : 0;
-          const score = cnt * 1000 + avgDist;
-          if (score < bestScore) { bestScore = score; bestDay = dateStr; }
+            : BA_EMPTY_DAY_BASELINE_KM;
+          if (avgDist < bestScore) { bestScore = avgDist; bestDay = dateStr; }
         });
         if (bestDay == null) { _baUnassigned.push(f.n); return; } // どの日に入れても回りきれない
         const key = bestDay + '_' + route;
@@ -4260,58 +4247,26 @@ function runBulkAssign() {
         _baPreview[key].push(f.n);
       };
 
-      // まずエリア（近距離）でクラスタ化し、同じエリアの施設は同じルート（担当者）に揃える。
-      // クラスタ全体を1日に置けるかもシミュレーションで判定し、無理なら1件ずつ分散配置する。
-      const clusters = baGeoCluster(facs, 8);
-      clusters.sort((a,b) => b.length - a.length);
+      // 各施設のルートを個別に決め（過去実績の重心に近い方）、ルートごとに
+      // 会社を起点とした最近傍順に並べ替えてから1件ずつ配置する。
+      // 近い施設を連続して処理することで、「その日にある施設との平均距離が近い日」を
+      // 優先するplaceOneのスコアリングと合わさり、自然にエリアがまとまる。
+      const byRoute = { route1: [], route2: [] };
+      facs.forEach(f => byRoute[baAssignRoute(f, centroids)].push(f));
 
-      const CLUSTER_ROUTE_MAX = 6; // これより大きい塊は近距離の連鎖でできた見せかけのクラスタとみなす
-
-      clusters.forEach(cluster => {
-        if (cluster.length > CLUSTER_ROUTE_MAX) {
-          // 連鎖でエリアがまたがる大きな塊は、全員に同じルートを強制すると
-          // 個々の施設の本来近いルートを無視してしまうので、1件ずつ個別にルート判定する
-          cluster.forEach(f => placeOne(f, baAssignRoute(f, centroids)));
-          return;
+      ['route1','route2'].forEach(route => {
+        const remaining = [...byRoute[route]];
+        let cur = COMPANY_POS;
+        while (remaining.length) {
+          let bi = 0, bd = Infinity;
+          remaining.forEach((f,i) => {
+            const d = distKm(cur, f);
+            if (d != null && d < bd) { bd = d; bi = i; }
+          });
+          const f = remaining.splice(bi, 1)[0];
+          placeOne(f, route);
+          cur = f;
         }
-
-        const routeVotes = { route1: 0, route2: 0 };
-        cluster.forEach(f => routeVotes[baAssignRoute(f, centroids)]++);
-        const route = routeVotes.route1 >= routeVotes.route2 ? 'route1' : 'route2';
-
-        const allowedPerFac = cluster.map(f => baAllowedDaysForRoute(f, candidateDays, route));
-        const intersection = candidateDays.filter(d => allowedPerFac.every(days => days.includes(d)));
-
-        if (cluster.length === 1 || !intersection.length) {
-          cluster.forEach(f => placeOne(f, route));
-          return;
-        }
-
-        // クラスタの重心と既存施設との距離でベストな日を選ぶ（同エリアをまとめて1日に寄せる）
-        const clat = cluster.reduce((s,f)=>s+f.lat,0) / cluster.length;
-        const clng = cluster.reduce((s,f)=>s+f.lng,0) / cluster.length;
-        const centroid = { lat: clat, lng: clng };
-        let bestDay = null, bestScore = Infinity;
-        intersection.forEach(dateStr => {
-          const key = dateStr + '_' + route;
-          const existingFacs = facsOf(key);
-          if (!baFeasible([...existingFacs, ...cluster])) return; // クラスタ全員をこの日に入れると回りきれない
-          const cnt = countOf(key);
-          const avgDist = existingFacs.length
-            ? existingFacs.reduce((s,ef) => s + (distKm(centroid,ef)||0), 0) / existingFacs.length
-            : 0;
-          const score = cnt * 1000 + avgDist;
-          if (score < bestScore) { bestScore = score; bestDay = dateStr; }
-        });
-
-        if (bestDay == null) {
-          // クラスタ全員を1日にまとめると回りきれない場合は1件ずつ分散配置にフォールバック
-          cluster.forEach(f => placeOne(f, route));
-          return;
-        }
-        const key = bestDay + '_' + route;
-        if (!_baPreview[key]) _baPreview[key] = [];
-        cluster.forEach(f => _baPreview[key].push(f.n));
       });
 
       renderBaPreview();
