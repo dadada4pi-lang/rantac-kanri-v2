@@ -3223,13 +3223,13 @@ function renderMissingDays(){
   const period=getCurrentPeriod();
   const arr=JSON.parse(localStorage.getItem('att_'+currentUser)||'[]');
   const recorded=new Set(arr.map(r=>r.date));
-  const today=new Date().toISOString().slice(0,10);
+  const today=fmtDateYMD(new Date());
   const days=[];
   const isPart = PART_USERS.includes(currentUser);
   let d=new Date(period.start+'T00:00:00');
-  const end=new Date(Math.min(new Date(today),new Date(period.end+'T00:00:00')));
+  const end=new Date(Math.min(new Date(today+'T00:00:00'),new Date(period.end+'T00:00:00')));
   while(d<=end){
-    const ds=d.toISOString().slice(0,10);
+    const ds=fmtDateYMD(d);
     if(isBusinessDay(ds)&&!recorded.has(ds)) days.push(ds);
     d.setDate(d.getDate()+1);
   }
