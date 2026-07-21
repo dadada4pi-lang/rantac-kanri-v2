@@ -4097,6 +4097,17 @@ function baAllowedDays(f, candidateDays) {
   });
 }
 
+// 配達予定画面の noteByDow と同じ固定パターン：水曜は宮川さん(route2)公休、木曜は岸さん(route1)公休。
+// この日はそのルートに割り当てても実際には配達されないので、候補から外す。
+const BA_ROUTE_OFF_DOW = { route2: 3, route1: 4 };
+function baRouteAvailable(dateStr, route) {
+  const dow = new Date(dateStr + 'T00:00:00').getDay();
+  return BA_ROUTE_OFF_DOW[route] !== dow;
+}
+function baAllowedDaysForRoute(f, candidateDays, route) {
+  return baAllowedDays(f, candidateDays).filter(d => baRouteAvailable(d, route));
+}
+
 // 過去数週間のroute1/route2の実績からエリア重心を推定（岸さん/宮川さんの担当エリア近似）
 function baComputeRouteCentroids(weekStart) {
   const weeks = [];
@@ -4207,7 +4218,7 @@ function runBulkAssign() {
       };
 
       const placeOne = (f, route) => {
-        const allowed = baAllowedDays(f, candidateDays);
+        const allowed = baAllowedDaysForRoute(f, candidateDays, route);
         if (!allowed.length) { _baUnassigned.push(f.n); return; }
         let bestDay = null, bestScore = Infinity;
         allowed.forEach(dateStr => {
@@ -4232,12 +4243,21 @@ function runBulkAssign() {
       const clusters = baGeoCluster(facs, 8);
       clusters.sort((a,b) => b.length - a.length);
 
+      const CLUSTER_ROUTE_MAX = 6; // これより大きい塊は近距離の連鎖でできた見せかけのクラスタとみなす
+
       clusters.forEach(cluster => {
+        if (cluster.length > CLUSTER_ROUTE_MAX) {
+          // 連鎖でエリアがまたがる大きな塊は、全員に同じルートを強制すると
+          // 個々の施設の本来近いルートを無視してしまうので、1件ずつ個別にルート判定する
+          cluster.forEach(f => placeOne(f, baAssignRoute(f, centroids)));
+          return;
+        }
+
         const routeVotes = { route1: 0, route2: 0 };
         cluster.forEach(f => routeVotes[baAssignRoute(f, centroids)]++);
         const route = routeVotes.route1 >= routeVotes.route2 ? 'route1' : 'route2';
 
-        const allowedPerFac = cluster.map(f => baAllowedDays(f, candidateDays));
+        const allowedPerFac = cluster.map(f => baAllowedDaysForRoute(f, candidateDays, route));
         const intersection = candidateDays.filter(d => allowedPerFac.every(days => days.includes(d)));
 
         if (cluster.length === 1 || !intersection.length) {
