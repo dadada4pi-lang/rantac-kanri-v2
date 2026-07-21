@@ -3230,7 +3230,7 @@ function renderMissingDays(){
   const end=new Date(Math.min(new Date(today),new Date(period.end+'T00:00:00')));
   while(d<=end){
     const ds=d.toISOString().slice(0,10);
-    if(isBusinessDay(ds)&&!recorded.has(ds)&&ds!==today) days.push(ds);
+    if(isBusinessDay(ds)&&!recorded.has(ds)) days.push(ds);
     d.setDate(d.getDate()+1);
   }
   if(!days.length){box.innerHTML='';return;}
