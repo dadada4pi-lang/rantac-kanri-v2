@@ -4095,10 +4095,12 @@ function baCandidateDays(weekStart) {
 
 // 施設ごとの割り当て可能日（休診曜日・納品可能日で絞り込み）
 function baAllowedDays(f, candidateDays) {
+  // 「要確認」など曜日の漢字を含まないテキストは、曜日指定ではなく「制限なし」の意味なので無視する
+  const hasDowSpec = f.delivery && DAYS.some(d => f.delivery.includes(d));
   return candidateDays.filter(dateStr => {
     const dow = new Date(dateStr + 'T00:00:00').getDay();
     if ((f.cd||[]).includes(dow)) return false;
-    if (f.delivery && !f.delivery.includes(DAYS[dow])) return false;
+    if (hasDowSpec && !f.delivery.includes(DAYS[dow])) return false;
     return true;
   });
 }
