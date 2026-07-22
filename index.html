@@ -2795,6 +2795,9 @@ function prescribedMinsForRecord(r, user) {
 
 function getHalfDayLeave(date) {
   if (!date || !currentUser) return null;
+  // 出勤中（clockIn_user）に半休種別を引き継いでいる場合はそちらを優先
+  const saved = JSON.parse(localStorage.getItem('clockIn_' + currentUser) || 'null');
+  if (saved && saved.date === date && saved.halfDay) return { clockIn: saved.halfDay };
   const arr = JSON.parse(localStorage.getItem('att_' + currentUser) || '[]');
   return arr.find(r => r.date === date && (r.clockIn === '午前半休' || r.clockIn === '午後半休')) || null;
 }
@@ -2904,8 +2907,9 @@ function resetClockIn() {
 
 function showClockOutPanel(date, clockIn) {
   document.getElementById('clockInInfo').innerHTML = `${date}<br>出勤時刻：${clockIn}`;
-  document.getElementById('attClockOut').value = '';
   const halfDay = getHalfDayLeave(date);
+  // 午後半休は午後が休みなので退勤時刻を12:00で仮セット（編集は可能）
+  document.getElementById('attClockOut').value = (halfDay && halfDay.clockIn === '午後半休') ? '12:00' : '';
   document.getElementById('attBreak').value = halfDay ? getBreakForHalfDay(halfDay) : getDefaultBreak();
   document.getElementById('clockOutStatus').textContent = '';
   document.getElementById('attWorkHours').style.display = 'none';
@@ -2983,13 +2987,16 @@ function submitClockIn() {
   const holidayWork = isHoliday(date);
   const status = document.getElementById('clockInStatus');
   const directOut = isSales() ? (document.getElementById('attDirectOut').value.trim()) : '';
-  localStorage.setItem('clockIn_' + currentUser, JSON.stringify({ date, clockIn, holidayWork, directOut }));
+  const halfDay = _pendingHalfDayType || '';
+  _pendingHalfDayType = null;
+  localStorage.setItem('clockIn_' + currentUser, JSON.stringify({ date, clockIn, holidayWork, directOut, halfDay }));
   status.textContent = holidayWork ? '✅ 休日出勤として記録しました' : '✅ 出勤時刻を記録しました';
   status.style.color = holidayWork ? '#e53935' : '#43a047';
   setTimeout(() => showClockOutPanel(date, clockIn), 800);
 }
 
 let _paidLeavePendingType = null;
+let _pendingHalfDayType = null; // 午後半休選択時、これから記録する出勤に引き継ぐ種別
 let paidLeaveBalance = {};
 
 function updatePaidLeaveBtnLabel() {
@@ -3074,28 +3081,46 @@ function execPaidLeaveConfirmed() {
   _paidLeavePendingType = null;
   const amount = type === '全日' ? 1 : 0.5;
   const date = document.getElementById('attDate').value;
-  const prescribed = getPrescribedMins();
-  const mins = type === '全日' ? prescribed : Math.floor(prescribed / 2);
-  const label = type === '全日' ? '有給' : type;
-  const record = { date, clockIn: label, clockOut: label, breakMin: 0,
-    workHours: fmtMin(mins), overtime: isDelivery() ? '' : '0時間0分' };
-  const key = 'att_' + currentUser;
-  const arr = JSON.parse(localStorage.getItem(key) || '[]');
-  arr.push(record);
-  localStorage.setItem(key, JSON.stringify(arr));
-  // 残数を減らす
+
+  // 残数の減算・GASへの反映は種別に関わらず即時に行う
   const newVal = Math.max(0, (getPaidLeaveRemaining(currentUser) || 0) - amount);
   paidLeaveBalance[currentUser] = newVal;
   localStorage.setItem('paidLeave_' + currentUser, newVal);
   updatePaidLeaveBtnLabel();
+  fetch(GAS_URL + '?type=use_paid_leave&user=' + currentUser + '&amount=' + amount, { mode: 'no-cors' });
+
   const status = document.getElementById('clockInStatus');
+
+  if (type === '午前半休') {
+    // 午前は休み。13:00に出勤したものとして、そのまま退勤時刻の入力に進む
+    localStorage.setItem('clockIn_' + currentUser, JSON.stringify({ date, clockIn: '13:00', holidayWork: false, directOut: '', halfDay: '午前半休' }));
+    status.textContent = `✅ 午前半休を記録しました（残数 ${newVal}日）。13:00出勤として退勤時刻を入力してください`;
+    status.style.color = '#f57c00';
+    showClockOutPanel(date, '13:00');
+    return;
+  }
+  if (type === '午後半休') {
+    // 午後は休み。午前は通常通り出勤してもらうので、種別だけ引き継いで出勤時刻の入力へ
+    _pendingHalfDayType = '午後半休';
+    status.textContent = `✅ 午後半休を記録しました（残数 ${newVal}日）。午前の出勤時刻を入力してください`;
+    status.style.color = '#f57c00';
+    return;
+  }
+
+  // 全日有給：この日は丸ごと休みなので、そのまま1件のレコードとして確定する
+  const prescribed = getPrescribedMins();
+  const record = { date, clockIn: '有給', clockOut: '有給', breakMin: 0,
+    workHours: fmtMin(prescribed), overtime: isDelivery() ? '' : '0時間0分' };
+  const key = 'att_' + currentUser;
+  const arr = JSON.parse(localStorage.getItem(key) || '[]');
+  arr.push(record);
+  localStorage.setItem(key, JSON.stringify(arr));
   status.textContent = '送信中...';
   status.style.color = '#888';
   const params = new URLSearchParams(record);
-  fetch(GAS_URL + '?' + params.toString() + '&type=att&user=' + currentUser, { mode: 'no-cors' });
-  fetch(GAS_URL + '?type=use_paid_leave&user=' + currentUser + '&amount=' + amount, { mode: 'no-cors' })
-    .then(() => { status.textContent = `✅ ${label}を記録しました（残数 ${newVal}日）`; status.style.color = '#f57c00'; })
-    .catch(() => { status.textContent = '✅ 保存しました（オフライン）'; status.style.color = '#43a047'; })
+  fetch(GAS_URL + '?' + params.toString() + '&type=att&user=' + currentUser, { mode: 'no-cors' })
+    .then(() => { status.textContent = `✅ 有給を記録しました（残数 ${newVal}日）`; status.style.color = '#f57c00'; renderMissingDays(); })
+    .catch(() => { status.textContent = '✅ 保存しました（オフライン）'; status.style.color = '#43a047'; renderMissingDays(); })
     .finally(() => { const btn = document.getElementById('continueClockInBtn'); if (btn) btn.style.display = 'block'; });
 }
 
