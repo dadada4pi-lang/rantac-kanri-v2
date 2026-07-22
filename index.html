@@ -2903,6 +2903,16 @@ function updateUserUI() {
 
 function resetClockIn() {
   if (!confirm('出勤時刻をやり直しますか？')) return;
+  // 午前/午後半休を選んでからやり直す場合、すでに消費した有給残数はそのままだと
+  // 戻らず消えてしまうため、この出勤をキャンセルする際に半休分を払い戻す
+  const saved = JSON.parse(localStorage.getItem('clockIn_' + currentUser) || 'null');
+  if (saved && saved.halfDay) {
+    const newBal = (getPaidLeaveRemaining(currentUser) || 0) + 0.5;
+    paidLeaveBalance[currentUser] = newBal;
+    localStorage.setItem('paidLeave_' + currentUser, newBal);
+    fetch(GAS_URL + '?type=set_paid_leave&user=' + currentUser + '&days=' + newBal, { mode: 'no-cors' });
+    updatePaidLeaveBtnLabel();
+  }
   localStorage.removeItem('clockIn_' + currentUser);
   openAttendance();
 }
