@@ -2790,7 +2790,9 @@ function getDefaultBreak(u) {
 // 残業ゼロになってしまう不具合があったため、記録に残った halfDay フラグを見て判定する。
 function prescribedMinsForRecord(r, user) {
   const base = getPrescribedMins(user);
-  return r && r.halfDay ? Math.floor(base / 2) : base;
+  // 半休の日は「所定時間の半分」ではなく、法定労働時間（1日8時間=480分）の実労働基準で残業を判定する。
+  // 半休を取ったからといって法律上の割増賃金の基準（実働8時間超）が変わるわけではないため。
+  return r && r.halfDay ? 480 : base;
 }
 
 function getHalfDayLeave(date) {
