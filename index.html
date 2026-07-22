@@ -2808,7 +2808,7 @@ function getHalfDayLeave(date) {
 function getBreakForHalfDay(halfDay) {
   if (!halfDay) return getDefaultBreak();
   if (halfDay.clockIn === '午前半休') return currentUser === 'horiuchi' ? 0 : (isDelivery() ? 0 : 30);
-  if (halfDay.clockIn === '午後半休') return currentUser === 'horiuchi' ? 0 : (isDelivery() ? 0 : 60);
+  if (halfDay.clockIn === '午後半休') return 0;
   return getDefaultBreak();
 }
 
