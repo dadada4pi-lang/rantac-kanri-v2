@@ -1022,7 +1022,7 @@ function printAttReport() {
           <td>${note}</td>
         </tr>`;
       } else {
-        const otMins = Math.max(0, (mins||0) - 450);
+        const otMins = Math.max(0, (mins||0) - prescribedMinsForRecord(r, user));
         totalOtMins += otMins;
         const otStr = otMins > 0 ? `${Math.floor(otMins/60)}時間${otMins%60}分` : '';
         rows += `<tr${rowStyle}>
@@ -2785,6 +2785,14 @@ function getDefaultBreak(u) {
   return isDelivery(usr) ? 60 : 90;
 }
 
+// 半休を使った日の所定労働時間（半分）。半休が絡まない普通の日はそのままの所定時間を返す。
+// 半休＋実出勤を組み合わせた日を通常の1日基準で残業計算すると、実際は働いた分なのに
+// 残業ゼロになってしまう不具合があったため、記録に残った halfDay フラグを見て判定する。
+function prescribedMinsForRecord(r, user) {
+  const base = getPrescribedMins(user);
+  return r && r.halfDay ? Math.floor(base / 2) : base;
+}
+
 function getHalfDayLeave(date) {
   if (!date || !currentUser) return null;
   const arr = JSON.parse(localStorage.getItem('att_' + currentUser) || '[]');
@@ -3193,15 +3201,18 @@ function submitClockOut() {
   if (clockOut !== clockOutRaw) { document.getElementById('attClockOut').value = clockOut; updateWorkHours(); }
 
   const directIn = isSales() ? (document.getElementById('attDirectIn').value.trim()) : '';
-  const record = { date: saved.date, clockIn: saved.clockIn, clockOut, breakMin, holidayWork: saved.holidayWork ? '休日出勤' : '', directOut: saved.directOut || '', directIn };
+  // 午前/午後半休を使った日に実際にも出退勤を記録すると、この保存で同じ日のレコードが
+  // 上書きされ「半休を使った」という情報が消えてしまっていた（残業計算や集計が普通の1日
+  // 基準に戻ってしまうバグの原因）。halfDayを引き継いで記録に残す。
+  const halfDay = getHalfDayLeave(saved.date);
+  const record = { date: saved.date, clockIn: saved.clockIn, clockOut, breakMin, holidayWork: saved.holidayWork ? '休日出勤' : '', directOut: saved.directOut || '', directIn, halfDay: halfDay ? halfDay.clockIn : '' };
   const workMins = calcWorkMin(record.clockIn, record.clockOut, record.breakMin);
   record.workHours = workMins ? fmtMin(workMins) : '';
   const nightMins = calcNightMins(record.clockIn, record.clockOut);
   record.nightHours = nightMins > 0 ? fmtMin(nightMins) : '';
 
   if (!isDelivery()) {
-    const halfDay = getHalfDayLeave(saved.date);
-    const prescribedMins = halfDay ? Math.floor(getPrescribedMins() / 2) : getPrescribedMins();
+    const prescribedMins = prescribedMinsForRecord(record, currentUser);
     const overtimeMins = workMins ? Math.max(0, workMins - prescribedMins) : 0;
     record.overtime = fmtMin(overtimeMins);
   }
@@ -4653,7 +4664,7 @@ function renderWorkSummary() {
     function getMins(r){ return (r.clockIn==='有給'||r.clockIn==='半休') ? parseWorkHours(r.workHours) : (calcWorkMin(r.clockIn,r.clockOut,r.breakMin)||0); }
     const totalWork = monthRecs.reduce((sum, r) => sum + getMins(r), 0);
     const showOt = SALES_USERS.includes(u);
-    const totalOt = showOt ? monthRecs.reduce((sum, r) => sum + Math.max(0, getMins(r) - 450), 0) : 0;
+    const totalOt = showOt ? monthRecs.reduce((sum, r) => sum + Math.max(0, getMins(r) - prescribedMinsForRecord(r, u)), 0) : 0;
     const hwMin = monthRecs.filter(r => r.holidayWork).reduce((sum, r) => sum + getMins(r), 0);
     const totalNight = monthRecs.reduce((sum, r) => sum + ((r.clockIn==='有給'||r.clockIn==='半休') ? 0 : (calcNightMins(r.clockIn,r.clockOut)||0)), 0);
     const workStr = fmtMin(totalWork || null);
@@ -5028,7 +5039,8 @@ function renderMyAttHTML(user) {
     const rows = records.map(r => {
       const isPaidLeave = r.clockIn === '有給' || r.clockIn === '半休';
       const mins = isPaidLeave ? parseWorkHours(r.workHours) : calcWorkMin(r.clockIn, r.clockOut, r.breakMin);
-      const otMin = isSales ? Math.max(0, (mins||0) - 450) : null;
+      const otMin = isSales ? Math.max(0, (mins||0) - prescribedMinsForRecord(r, user)) : null;
+      const halfDayTag = r.halfDay ? `<span style="font-size:10px;background:#fb8c00;color:#fff;border-radius:3px;padding:1px 4px;margin-left:3px">${r.halfDay}</span>` : '';
       const nightMin = isPaidLeave ? 0 : (calcNightMins(r.clockIn, r.clockOut) || 0);
       const hw = r.holidayWork ? '<span style="font-size:10px;background:#e53935;color:#fff;border-radius:3px;padding:1px 4px;margin-left:3px">休日</span>' : '';
       const dOut = r.directOut ? '<span style="font-size:10px;background:#fb8c00;color:#fff;border-radius:3px;padding:1px 4px;margin-left:3px">直帰</span>' : '';
@@ -5039,14 +5051,14 @@ function renderMyAttHTML(user) {
       const workStr = (!isPaidLeave && r.clockIn !== '公休' && mins > 0) ? `<span style="font-size:11px;color:#888;margin-left:4px">実働${fmtMin(mins)}</span>` : '';
       return `<div style="display:flex;align-items:center;padding:9px 0;border-bottom:1px solid #f3f3f3;gap:6px;font-size:13px">
         <div style="min-width:50px;font-weight:600;color:#333">${(r.date||'').slice(5).replace('-','/')}</div>
-        <div style="flex:1;color:#555">${isPaidLeave || r.clockIn==='公休' ? (r.clockIn + (mins ? `　${fmtMin(mins)}` : '')) : `${r.clockIn||'-'} → ${r.clockOut||'-'}`}${breakStr}${workStr}${hw}${dOut}${nightTag}</div>
+        <div style="flex:1;color:#555">${isPaidLeave || r.clockIn==='公休' ? (r.clockIn + (mins ? `　${fmtMin(mins)}` : '')) : `${r.clockIn||'-'} → ${r.clockOut||'-'}`}${breakStr}${workStr}${hw}${dOut}${nightTag}${halfDayTag}</div>
         <div style="min-width:60px;text-align:right;font-weight:700;color:${rightColor}">${rightVal}</div>
         <button onclick="deleteAttRecord('${user}','${r.date}')" style="background:none;border:none;color:#ccc;font-size:16px;cursor:pointer;padding:0 2px;line-height:1" title="削除">✕</button>
       </div>`;
     }).join('');
     function getRecMins(r) { return (r.clockIn === '有給' || r.clockIn === '半休') ? parseWorkHours(r.workHours) : (calcWorkMin(r.clockIn, r.clockOut, r.breakMin)||0); }
     const totalMin = isSales
-      ? records.reduce((s,r) => s + Math.max(0, getRecMins(r) - 450), 0)
+      ? records.reduce((s,r) => s + Math.max(0, getRecMins(r) - prescribedMinsForRecord(r, user)), 0)
       : records.reduce((s,r) => s + getRecMins(r), 0);
     const totalSalary = showSalary ? calcSalaryYen(records.reduce((s,r) => s + getRecMins(r), 0)) : 0;
     const totalLabel = showSalary ? '給与合計' : isSales ? '残業合計' : '合計';
