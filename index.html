@@ -1400,16 +1400,65 @@ function deleteFacility(){
   renderFacilityList();
 }
 
-function saveNewFacility(){
+// 住所からOpenStreetMap（Nominatim）で緯度経度を取得。取れない場合はnullを返す。
+// 番地まで含む完全な住所だとヒットしないことが多いため、番地・建物名を段階的に
+// 切り詰めながら何回か試す（町丁目レベルの精度でもルート計算には十分）
+async function geocodeAddress(address){
+  if(!address) return null;
+  const candidates = [address];
+  const spaceIdx = address.search(/[ 　]/);
+  if(spaceIdx > 0) candidates.push(address.slice(0, spaceIdx));
+  // 末尾が building 名などで数字で終わっていない場合、最後に数字が出てくる位置までで切る
+  const digitMatch = address.match(/^(.*?[0-9０-９])[^0-9０-９]*$/);
+  if(digitMatch && digitMatch[1] !== address) candidates.push(digitMatch[1]);
+  let stripped = candidates[candidates.length-1];
+  for(let i=0;i<3;i++){
+    const next = stripped
+      .replace(/[0-9０-９]+[\-−ー][0-9０-９\-−ー]*$/, '')
+      .replace(/[0-9０-９]+$/, '')
+      .trim();
+    if(!next || next === stripped) break;
+    candidates.push(next);
+    stripped = next;
+  }
+  for(const c of candidates){
+    if(!c) continue;
+    try{
+      const url = 'https://nominatim.openstreetmap.org/search?format=json&countrycodes=jp&limit=1&q=' + encodeURIComponent(c);
+      const res = await fetch(url, { headers: { 'Accept-Language': 'ja' } });
+      const list = await res.json();
+      if(Array.isArray(list) && list.length){
+        return { lat: parseFloat(list[0].lat), lng: parseFloat(list[0].lon) };
+      }
+    }catch(e){}
+  }
+  return null;
+}
+
+async function saveNewFacility(){
   const name = document.getElementById('afName').value.trim();
   if(!name){ alert('施設名を入力してください'); return; }
   const cd = [...document.querySelectorAll('.af-cd:checked')].map(cb=>Number(cb.value));
   // 編集時は既存の緯度経度・機器情報を引き継ぐ（このフォームに入力欄がないため、
   // nullで上書きすると地図上の距離計算が壊れる＝過去に実際に起きた不具合）
   const existing = _editFacIdx !== null ? DB[_editFacIdx] : null;
+  const addr = document.getElementById('afAddr').value.trim();
+  let lat = existing ? existing.lat : null;
+  let lng = existing ? existing.lng : null;
+  const addrChanged = !existing || (existing.a||'') !== addr;
+  const saveBtn = document.getElementById('addFacSaveBtn');
+  const origBtnText = saveBtn.textContent;
+  if (addr && (lat==null || lng==null || addrChanged)) {
+    saveBtn.textContent = '住所から座標を取得中...';
+    saveBtn.disabled = true;
+    const geo = await geocodeAddress(addr);
+    if (geo) { lat = geo.lat; lng = geo.lng; }
+    saveBtn.textContent = origBtnText;
+    saveBtn.disabled = false;
+  }
   const fac = {
     n: name,
-    a: document.getElementById('afAddr').value.trim(),
+    a: addr,
     tel: document.getElementById('afTel').value.trim(),
     staff: document.getElementById('afStaff').value.trim(),
     code: document.getElementById('afCode').value.trim(),
@@ -1419,8 +1468,7 @@ function saveNewFacility(){
     rank: document.getElementById('afRank').value.trim(),
     tanomoto: document.getElementById('afTanomoto').value.trim(),
     cd, cn: document.getElementById('afCn').value.trim(),
-    lat: existing ? existing.lat : null,
-    lng: existing ? existing.lng : null,
+    lat, lng,
     holiday: existing ? (existing.holiday||'') : '',
     devices: existing ? (existing.devices||{}) : {}
   };
