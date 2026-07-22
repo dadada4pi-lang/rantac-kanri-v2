@@ -4837,9 +4837,11 @@ function deleteAttRecord(user, date) {
   const newArr = arr.filter(r => r.date !== date);
   localStorage.setItem('att_' + user, JSON.stringify(newArr));
   fetch(GAS_URL + '?type=delete_att&user=' + user + '&date=' + date).catch(()=>{});
-  // 有給レコードなら残数を戻す
-  if (target && (target.clockIn === '有給' || target.clockIn === '半休')) {
-    const amount = target.clockIn === '半休' ? 0.5 : 1;
+  // 有給レコードなら残数を戻す（午前/午後半休は実際の出勤時刻が残っているので、
+  // clockIn自体ではなくhalfDayフィールドも合わせて判定する）
+  const isHalfDayRecord = target && target.halfDay && (target.halfDay === '午前半休' || target.halfDay === '午後半休');
+  if (target && (target.clockIn === '有給' || target.clockIn === '半休' || isHalfDayRecord)) {
+    const amount = (target.clockIn === '半休' || isHalfDayRecord) ? 0.5 : 1;
     const newBal = (getPaidLeaveRemaining(user) || 0) + amount;
     paidLeaveBalance[user] = newBal;
     localStorage.setItem('paidLeave_' + user, newBal);
