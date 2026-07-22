@@ -4817,6 +4817,7 @@ function deleteAttRecord(user, date) {
     localStorage.setItem('paidLeave_' + user, newBal);
     fetch(GAS_URL + '?type=set_paid_leave&user=' + user + '&days=' + newBal, { mode: 'no-cors' });
     if (user === currentUser) updatePaidLeaveBtnLabel();
+    updateMyDataPlBadge();
   }
   renderMyDataBody();
 }
