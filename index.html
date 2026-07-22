@@ -4617,7 +4617,10 @@ function applyDelivLogFilter() {
 }
 
 function updateWorkHours() {
-  const ci = document.getElementById('attClockIn').value;
+  // 退勤画面では出勤時刻入力欄(attClockIn)は隠れていて古い値が残ったままのことがあるため、
+  // 実際に記録された出勤時刻（clockIn_userセッション）を優先して使う
+  const savedClockIn = JSON.parse(localStorage.getItem('clockIn_' + currentUser) || 'null');
+  const ci = (savedClockIn && savedClockIn.clockIn) || document.getElementById('attClockIn').value;
   const co = document.getElementById('attClockOut').value;
   const br = document.getElementById('attBreak').value;
   const mins = calcWorkMin(ci, co, br);
