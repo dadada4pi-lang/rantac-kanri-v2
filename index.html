@@ -4843,7 +4843,15 @@ function clearData(user) {
 
 function deleteAttRecord(user, date) {
   if(isReadOnly()){ alert('会長は閲覧のみです'); return; }
-  if (!confirm(`${date} の出退勤を削除しますか？`)) return;
+  const arr0 = JSON.parse(localStorage.getItem('att_' + user) || '[]');
+  const target0 = arr0.find(r => r.date === date);
+  // 誤タップ対策：何を消そうとしているか具体的に表示してから確認する
+  const summary = target0
+    ? (target0.clockIn === '有給' || target0.clockIn === '半休' || target0.clockIn === '公休'
+        ? target0.clockIn
+        : `${target0.clockIn || '-'} → ${target0.clockOut || '-'}`)
+    : '';
+  if (!confirm(`${USER_NAMES[user] || user}\n${date}\n${summary}\n\nこの記録を削除しますか？`)) return;
   const arr = JSON.parse(localStorage.getItem('att_' + user) || '[]');
   const target = arr.find(r => r.date === date);
   const newArr = arr.filter(r => r.date !== date);
@@ -5096,7 +5104,7 @@ function renderMyAttHTML(user) {
         <div style="min-width:50px;font-weight:600;color:#333">${(r.date||'').slice(5).replace('-','/')}</div>
         <div style="flex:1;color:#555">${isPaidLeave || r.clockIn==='公休' ? (r.clockIn + (mins ? `　${fmtMin(mins)}` : '')) : `${r.clockIn||'-'} → ${r.clockOut||'-'}`}${breakStr}${workStr}${hw}${dOut}${nightTag}${halfDayTag}</div>
         <div style="min-width:60px;text-align:right;font-weight:700;color:${rightColor}">${rightVal}</div>
-        <button onclick="deleteAttRecord('${user}','${r.date}')" style="background:none;border:none;color:#ccc;font-size:16px;cursor:pointer;padding:0 2px;line-height:1" title="削除">✕</button>
+        <button onclick="deleteAttRecord('${user}','${r.date}')" style="background:none;border:none;color:#ccc;font-size:15px;cursor:pointer;padding:8px 4px;margin-left:10px;line-height:1" title="削除">✕</button>
       </div>`;
     }).join('');
     function getRecMins(r) { return (r.clockIn === '有給' || r.clockIn === '半休') ? parseWorkHours(r.workHours) : (calcWorkMin(r.clockIn, r.clockOut, r.breakMin)||0); }
