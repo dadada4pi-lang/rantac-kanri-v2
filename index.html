@@ -3975,9 +3975,15 @@ function dpRenderChips(key) {
   const names = _deliveryPlanSelections[key] || [];
   const editing = !!_dpEditMode[key];
   if (!names.length) return '<li style="color:#bbb;font-size:12px;padding:4px 0">未選択</li>';
-  return names.map((n, i) => `<li style="display:inline-flex;align-items:center;gap:4px;background:#eef2ff;border-radius:14px;padding:4px 10px;margin:0 6px 6px 0;font-size:13px">
-    ${n}${editing ? `<button onclick="dpRemoveFacility('${key}',${i})" style="background:none;border:none;color:#888;font-size:14px;cursor:pointer;padding:0;line-height:1">×</button>` : ''}
-  </li>`).join('');
+  const dow = new Date(key.slice(0,10) + 'T00:00:00').getDay();
+  return names.map((n, i) => {
+    const f = DB.find(x => x.n === n);
+    const closed = f && (f.cd||[]).includes(dow);
+    const warn = closed ? `<span style="color:#e53935;font-weight:700">⚠休診</span>` : '';
+    return `<li style="display:inline-flex;align-items:center;gap:4px;background:${closed?'#fdecea':'#eef2ff'};border-radius:14px;padding:4px 10px;margin:0 6px 6px 0;font-size:13px">
+    ${n}${warn}${editing ? `<button onclick="dpRemoveFacility('${key}',${i})" style="background:none;border:none;color:#888;font-size:14px;cursor:pointer;padding:0;line-height:1">×</button>` : ''}
+  </li>`;
+  }).join('');
 }
 
 function dpBuildRouteFrom(dateStr, route) {
@@ -4014,9 +4020,14 @@ function dpOnSearch(dateStr, route, val) {
     sugEl.style.display = 'block';
     return;
   }
-  sugEl.innerHTML = results.map(f => `<div onclick="dpAddFacility('${dateStr}','${route}','${f.n.replace(/'/g,"\\'")}')" style="padding:10px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:14px">
-    ${f.n}<div style="font-size:11px;color:#aaa">${f.a||''}</div>
-  </div>`).join('');
+  const dow = new Date(dateStr + 'T00:00:00').getDay();
+  sugEl.innerHTML = results.map(f => {
+    const closed = (f.cd||[]).includes(dow);
+    const warn = closed ? `<span style="color:#e53935;font-weight:700;margin-left:6px">⚠ この日は休診</span>` : '';
+    return `<div onclick="dpAddFacility('${dateStr}','${route}','${f.n.replace(/'/g,"\\'")}')" style="padding:10px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:14px">
+    ${f.n}${warn}<div style="font-size:11px;color:#aaa">${f.a||''}</div>
+  </div>`;
+  }).join('');
   sugEl.style.display = 'block';
   const vh = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
   const rect = sugEl.getBoundingClientRect();
