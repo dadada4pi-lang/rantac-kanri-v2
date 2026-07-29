@@ -40,6 +40,7 @@ body{font-family:'Noto Sans JP',-apple-system,BlinkMacSystemFont,'Hiragino Sans'
 .btn-home-go:active{opacity:.85}
 .home-list{border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
 .home-list-item{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);font-size:14px;font-weight:500;cursor:pointer;background:none;border-left:none;border-right:none;width:100%;text-align:left;color:var(--text)}
+body.shared-device .full-mode-only{display:none!important}
 .home-list-item:last-child{border-bottom:none}
 .home-list-item:active{background:var(--bg)}
 .home-list-chevron{color:var(--text-tertiary);font-size:14px}
@@ -349,17 +350,17 @@ input.att-input[type="time"]{min-width:0}
   <div class="home-body">
     <div class="home-meta"><span id="homeGreeting"></span></div>
     <div class="home-greeting">お疲れ様です</div>
-    <div id="todayOffBox" style="margin:10px 0"></div>
-    <div id="announceHomeBox" style="margin:10px 0"></div>
+    <div id="todayOffBox" style="margin:10px 0" class="full-mode-only"></div>
+    <div id="announceHomeBox" style="margin:10px 0" class="full-mode-only"></div>
     <button class="btn-home-go" onclick="goTo('methodScreen')">配達に行く</button>
     <div class="home-list">
-      <button class="home-list-item" id="attBtn" onclick="openAttendance()">出退勤を記録する<span class="home-list-chevron">›</span></button>
-      <button class="home-list-item" id="reportBtn" onclick="openReport()">報告書を作成する<span class="home-list-chevron">›</span></button>
+      <button class="home-list-item full-mode-only" id="attBtn" onclick="openAttendance()">出退勤を記録する<span class="home-list-chevron">›</span></button>
+      <button class="home-list-item full-mode-only" id="reportBtn" onclick="openReport()">報告書を作成する<span class="home-list-chevron">›</span></button>
       <button class="home-list-item" onclick="goTo('delivLogScreen')">配達記録を見る<span class="home-list-chevron">›</span></button>
       <button class="home-list-item" onclick="openDeliveryPlan()">配達予定を見る<span class="home-list-chevron">›</span></button>
       <button class="home-list-item" onclick="goTo('listScreen')">顧客一覧を見る<span class="home-list-chevron">›</span></button>
-      <button class="home-list-item" onclick="goTo('calendarScreen')">会社カレンダーを見る<span class="home-list-chevron">›</span></button>
-      <button class="home-list-item" id="myDataBtn" onclick="goTo('myDataScreen')">全員の出退勤・報告書を見る<span class="home-list-chevron">›</span></button>
+      <button class="home-list-item full-mode-only" onclick="goTo('calendarScreen')">会社カレンダーを見る<span class="home-list-chevron">›</span></button>
+      <button class="home-list-item full-mode-only" id="myDataBtn" onclick="goTo('myDataScreen')">全員の出退勤・報告書を見る<span class="home-list-chevron">›</span></button>
     </div>
     <div id="todayDeliveryBox" style="display:none;margin-top:16px"></div>
     <div style="margin-top:12px;text-align:center">
@@ -5269,6 +5270,15 @@ if (/[?&](logout|clearauth)/.test(location.search) || location.search.includes('
   localStorage.removeItem('currentUser');
   currentUser = '';
 }
+// 共用スマホ用モード：?shared=1 で一度開けばその端末はずっと共用モード（?shared=0で解除）。
+// この端末（ブラウザ）自体に紐づく設定なので、ログインするユーザーが誰でも適用される。
+(function(){
+  const m = location.search.match(/[?&]shared=(0|1)/);
+  if (m) localStorage.setItem('_sharedDevice', m[1]);
+})();
+function isSharedDevice(){ return localStorage.getItem('_sharedDevice') === '1'; }
+function applySharedModeUI(){ document.body.classList.toggle('shared-device', isSharedDevice()); }
+applySharedModeUI();
 updateUserUI();
 (function(){
   // OAuthリダイレクト後のコールバック処理（URLハッシュにid_tokenがある場合）
