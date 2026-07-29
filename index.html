@@ -322,6 +322,9 @@ input.att-input[type="time"]{min-width:0}
     <div style="font-size:13px;color:#888;margin-bottom:32px">社内専用システム</div>
     <div id="googleSignInBtn"></div>
     <div id="googleSignInError" style="color:#e53935;font-size:13px;margin-top:16px;display:none">このアカウントはアクセス権がありません</div>
+    <div style="margin-top:28px">
+      <button onclick="toggleSharedDeviceMode()" id="sharedModeToggleBtn" style="background:none;border:none;color:#aaa;font-size:12px;text-decoration:underline;cursor:pointer;padding:6px">共用モードにする</button>
+    </div>
   </div>
 </div>
 
@@ -5277,7 +5280,17 @@ if (/[?&](logout|clearauth)/.test(location.search) || location.search.includes('
   if (m) localStorage.setItem('_sharedDevice', m[1]);
 })();
 function isSharedDevice(){ return localStorage.getItem('_sharedDevice') === '1'; }
-function applySharedModeUI(){ document.body.classList.toggle('shared-device', isSharedDevice()); }
+function applySharedModeUI(){
+  document.body.classList.toggle('shared-device', isSharedDevice());
+  const btn = document.getElementById('sharedModeToggleBtn');
+  if (btn) btn.textContent = isSharedDevice() ? '共用モードを解除する' : '共用モードにする';
+}
+function toggleSharedDeviceMode(){
+  const next = isSharedDevice() ? '0' : '1';
+  localStorage.setItem('_sharedDevice', next);
+  applySharedModeUI();
+  alert(next === '1' ? 'この端末を共用モードにしました（配達関連の機能だけ表示されます）' : '共用モードを解除しました');
+}
 applySharedModeUI();
 updateUserUI();
 (function(){
