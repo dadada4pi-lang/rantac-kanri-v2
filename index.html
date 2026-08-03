@@ -3513,13 +3513,15 @@ function renderRepMissingDays() {
   const period = getCurrentPeriod();
   const repArr = JSON.parse(localStorage.getItem('rep_' + currentUser) || '[]');
   const repDates = new Set(repArr.map(r => r.date));
-  const today = new Date().toISOString().slice(0, 10);
+  const attArr = JSON.parse(localStorage.getItem('att_' + currentUser) || '[]');
+  const offDates = new Set(attArr.filter(r => r.clockIn === '有給' || r.clockIn === '半休' || r.clockIn === '公休').map(r => r.date));
+  const today = fmtDateYMD(new Date());
   const days = [];
   let d = new Date(period.start + 'T00:00:00');
   const end = new Date(Math.min(new Date(today).getTime(), new Date(period.end + 'T00:00:00').getTime()));
   while (d <= end) {
-    const ds = d.toISOString().slice(0, 10);
-    if (isBusinessDay(ds) && !repDates.has(ds) && ds !== today) days.push(ds);
+    const ds = fmtDateYMD(d);
+    if (isBusinessDay(ds) && !repDates.has(ds) && !offDates.has(ds) && ds !== today) days.push(ds);
     d.setDate(d.getDate() + 1);
   }
   if (!days.length) { box.innerHTML = ''; return; }
