@@ -1211,7 +1211,12 @@ function loadAllDataFromGAS() {
   showMyDataLoading(true);
   var done = 0, total = ALL_USERS.length * 2;
   function tick() { if (++done >= total) showMyDataLoading(false); }
-  ALL_USERS.forEach(function(u) {
+  // 今表示中の担当者を最優先で取得し、他の担当者の読み込み完了を待たずに表示できるようにする
+  var priority = _myDataUser || currentUser;
+  var orderedUsers = ALL_USERS.slice().sort(function(a, b) {
+    return (a === priority ? -1 : 0) - (b === priority ? -1 : 0);
+  });
+  orderedUsers.forEach(function(u) {
     fetch(GAS_URL + '?type=get_att&user=' + u)
       .then(function(r){ return r.json(); })
       .then(function(records){
