@@ -3340,9 +3340,9 @@ function renderMissingDays(){
   const days=[];
   const isPart = PART_USERS.includes(currentUser);
   // 締日（21日）をまたいでも未入力の日が消えないよう、期（当月分）だけでなく
-  // 過去60日分をさかのぼってチェックする
-  let d=new Date(today+'T00:00:00');
-  d.setDate(d.getDate()-60);
+  // 運用開始日（2026-07-21）以降をさかのぼってチェックする
+  const OPS_START_DATE='2026-07-21';
+  let d=new Date(OPS_START_DATE+'T00:00:00');
   const end=new Date(today+'T00:00:00');
   while(d<=end){
     const ds=fmtDateYMD(d);
