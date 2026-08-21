@@ -3334,14 +3334,16 @@ function submitKyukyu() {
 function renderMissingDays(){
   const box=document.getElementById('missingDaysBox');
   if(!box||!currentUser)return;
-  const period=getCurrentPeriod();
   const arr=JSON.parse(localStorage.getItem('att_'+currentUser)||'[]');
   const recorded=new Set(arr.map(r=>r.date));
   const today=fmtDateYMD(new Date());
   const days=[];
   const isPart = PART_USERS.includes(currentUser);
-  let d=new Date(period.start+'T00:00:00');
-  const end=new Date(Math.min(new Date(today+'T00:00:00'),new Date(period.end+'T00:00:00')));
+  // 締日（21日）をまたいでも未入力の日が消えないよう、期（当月分）だけでなく
+  // 過去60日分をさかのぼってチェックする
+  let d=new Date(today+'T00:00:00');
+  d.setDate(d.getDate()-60);
+  const end=new Date(today+'T00:00:00');
   while(d<=end){
     const ds=fmtDateYMD(d);
     if(isBusinessDay(ds)&&!recorded.has(ds)) days.push(ds);
