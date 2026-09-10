@@ -3493,7 +3493,7 @@ function openReport() {
       srRows = draft.rows;
       if (draft.date) document.getElementById('srDate').value = draft.date;
     } else {
-      localStorage.removeItem('rep_draft_' + currentUser);
+      // 「キャンセル」は下書きを破棄する意味ではないので、途中保存データは消さずに残す
       srRows = buildInitialRows(today);
     }
   } else {
