@@ -2789,12 +2789,14 @@ function isDelivery(u) { return DELIVERY_USERS.includes(u || currentUser); }
 function getPrescribedMins(u) {
   const usr = u || currentUser;
   if (usr === 'horiuchi') return 330; // 9-15時 休憩30分
+  if (usr === 'tajima') return 390; // 9-16時半 休憩60分
   return isDelivery(usr) ? 360 : 450;
 }
 function getDefaultBreak(u) {
   const usr = u || currentUser;
   if (usr === 'horiuchi') return 30;
   if (usr === 'sato') return 60;
+  if (usr === 'tajima') return 60;
   return isDelivery(usr) ? 60 : 90;
 }
 
