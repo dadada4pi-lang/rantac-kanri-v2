@@ -1028,7 +1028,7 @@ function printAttReport() {
           <td>${note}</td>
         </tr>`;
       } else {
-        const otMins = Math.max(0, (mins||0) - prescribedMinsForRecord(r, user));
+        const otMins = isPL ? 0 : Math.max(0, (mins||0) - prescribedMinsForRecord(r, user));
         totalOtMins += otMins;
         const otStr = otMins > 0 ? `${Math.floor(otMins/60)}時間${otMins%60}分` : '';
         rows += `<tr${rowStyle}>
@@ -4766,7 +4766,7 @@ function renderWorkSummary() {
     function getMins(r){ return (r.clockIn==='有給'||r.clockIn==='半休') ? parseWorkHours(r.workHours) : (calcWorkMin(r.clockIn,r.clockOut,r.breakMin)||0); }
     const totalWork = monthRecs.reduce((sum, r) => sum + getMins(r), 0);
     const showOt = SALES_USERS.includes(u);
-    const totalOt = showOt ? monthRecs.reduce((sum, r) => sum + Math.max(0, getMins(r) - prescribedMinsForRecord(r, u)), 0) : 0;
+    const totalOt = showOt ? monthRecs.reduce((sum, r) => sum + ((r.clockIn==='有給'||r.clockIn==='半休') ? 0 : Math.max(0, getMins(r) - prescribedMinsForRecord(r, u))), 0) : 0;
     const hwMin = monthRecs.filter(r => r.holidayWork).reduce((sum, r) => sum + getMins(r), 0);
     const totalNight = monthRecs.reduce((sum, r) => sum + ((r.clockIn==='有給'||r.clockIn==='半休') ? 0 : (calcNightMins(r.clockIn,r.clockOut)||0)), 0);
     const workStr = fmtMin(totalWork || null);
@@ -5152,7 +5152,9 @@ function renderMyAttHTML(user) {
     const rows = records.map(r => {
       const isPaidLeave = r.clockIn === '有給' || r.clockIn === '半休';
       const mins = isPaidLeave ? parseWorkHours(r.workHours) : calcWorkMin(r.clockIn, r.clockOut, r.breakMin);
-      const otMin = isSales ? Math.max(0, (mins||0) - prescribedMinsForRecord(r, user)) : null;
+      // 全日有給・半休の日は実際に働いていないので残業は常に0（所定時間の定義変更で
+      // 過去の記録値との差分が残業として出てしまう不具合があったため明示的に0にする）
+      const otMin = isPaidLeave ? 0 : (isSales ? Math.max(0, (mins||0) - prescribedMinsForRecord(r, user)) : null);
       const halfDayTag = r.halfDay ? `<span style="font-size:10px;background:#fb8c00;color:#fff;border-radius:3px;padding:1px 4px;margin-left:3px">${r.halfDay}</span>` : '';
       const nightMin = isPaidLeave ? 0 : (calcNightMins(r.clockIn, r.clockOut) || 0);
       const hw = r.holidayWork ? '<span style="font-size:10px;background:#e53935;color:#fff;border-radius:3px;padding:1px 4px;margin-left:3px">休日</span>' : '';
@@ -5171,7 +5173,7 @@ function renderMyAttHTML(user) {
     }).join('');
     function getRecMins(r) { return (r.clockIn === '有給' || r.clockIn === '半休') ? parseWorkHours(r.workHours) : (calcWorkMin(r.clockIn, r.clockOut, r.breakMin)||0); }
     const totalMin = isSales
-      ? records.reduce((s,r) => s + Math.max(0, getRecMins(r) - prescribedMinsForRecord(r, user)), 0)
+      ? records.reduce((s,r) => s + ((r.clockIn === '有給' || r.clockIn === '半休') ? 0 : Math.max(0, getRecMins(r) - prescribedMinsForRecord(r, user))), 0)
       : records.reduce((s,r) => s + getRecMins(r), 0);
     const totalSalary = showSalary ? calcSalaryYen(records.reduce((s,r) => s + getRecMins(r), 0)) : 0;
     const totalLabel = showSalary ? '給与合計' : isSales ? '残業合計' : '合計';
