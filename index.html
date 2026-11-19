@@ -2804,10 +2804,14 @@ function getDefaultBreak(u) {
 // 半休＋実出勤を組み合わせた日を通常の1日基準で残業計算すると、実際は働いた分なのに
 // 残業ゼロになってしまう不具合があったため、記録に残った halfDay フラグを見て判定する。
 function prescribedMinsForRecord(r, user) {
-  const base = getPrescribedMins(user);
+  const usr = user || currentUser;
+  const base = getPrescribedMins(usr);
+  if (!(r && r.halfDay)) return base;
   // 半休の日は「所定時間の半分」ではなく、法定労働時間（1日8時間=480分）の実労働基準で残業を判定する。
   // 半休を取ったからといって法律上の割増賃金の基準（実働8時間超）が変わるわけではないため。
-  return r && r.halfDay ? 480 : base;
+  // ただし田嶋さんは所定労働時間自体が6.5時間（390分）に変更されているため、半休の日もその所定時間を基準にする。
+  if (usr === 'tajima') return base;
+  return 480;
 }
 
 function getHalfDayLeave(date) {
